@@ -1,0 +1,78 @@
+export interface ImageQuality {
+  quality: string
+  url: string
+}
+
+export interface Artist {
+  id: string
+  name: string
+  role?: string
+  image?: ImageQuality[]
+}
+
+export interface AlbumRef {
+  id: string
+  name: string
+  url?: string
+}
+
+export interface DownloadUrl {
+  quality: string
+  url: string
+}
+
+export interface Song {
+  id: string
+  name: string
+  type: string
+  year?: string
+  duration: number
+  language?: string
+  album: AlbumRef
+  artists: {
+    primary: Artist[]
+    all?: Artist[]
+  }
+  image: ImageQuality[]
+  downloadUrl: DownloadUrl[]
+  url?: string
+  playCount?: number
+}
+
+export interface Album {
+  id: string
+  name: string
+  description?: string
+  year?: number | string
+  language?: string
+  songCount?: number
+  songs?: Song[]
+  artists: {
+    primary: Artist[]
+  }
+  image: ImageQuality[]
+  url?: string
+}
+
+export interface Playlist {
+  id: string
+  name: string
+  description?: string
+  songCount?: number
+  songs?: Song[]
+  image: ImageQuality[]
+  url?: string
+}
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  avatar?: string
+}
+
+export interface StoredSong extends Song {
+  likedAt?: number
+  downloadedAt?: number
+  localBlobUrl?: string
+}
