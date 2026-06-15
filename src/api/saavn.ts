@@ -1,6 +1,10 @@
 import type { Album, Playlist, Song } from '../types'
 
-const BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+const BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV
+    ? '/api'
+    : import.meta.env.VITE_SAAVN_API_URL || 'https://saavn.sumit.co')
 
 async function fetchApi<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`)
