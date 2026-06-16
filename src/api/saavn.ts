@@ -1,10 +1,23 @@
 import type { Album, Playlist, Song } from '../types'
 
-const BASE =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV
-    ? '/api'
-    : import.meta.env.VITE_SAAVN_API_URL || 'https://saavn.sumit.co')
+function trimTrailingSlash(value: string) {
+  return value.replace(/\/+$/, '')
+}
+
+function getApiBase() {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return trimTrailingSlash(import.meta.env.VITE_API_BASE_URL)
+  }
+
+  if (import.meta.env.DEV) return '/api'
+
+  const origin = trimTrailingSlash(
+    import.meta.env.VITE_SAAVN_API_URL || 'https://saavn.sumit.co'
+  )
+  return `${origin}/api`
+}
+
+const BASE = getApiBase()
 
 async function fetchApi<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`)
@@ -26,6 +39,28 @@ function buildSongSearchQueries(query: string) {
   return Array.from(
     new Set([normalized, withoutParentheses, beforeParentheses].filter(Boolean))
   )
+}
+
+function buildRelatedSongQueries(query: string) {
+  const normalized = normalizeSearchQuery(query)
+  if (!normalized) return []
+
+  const withoutSongWord = normalizeSearchQuery(
+    normalized.replace(/\b(songs?|hits?|music|playlist|playlists)\b/gi, ' ')
+  )
+  const baseTerms = Array.from(
+    new Set([normalized, withoutSongWord].filter(Boolean))
+  )
+
+  const expanded = baseTerms.flatMap((term) => [
+    term,
+    `${term} songs`,
+    `${term} hits`,
+    `${term} movie songs`,
+    `${term} best songs`,
+  ])
+
+  return Array.from(new Set(expanded.map(normalizeSearchQuery).filter(Boolean)))
 }
 
 function mergeUniqueSongs(songs: Song[]) {
@@ -56,6 +91,35 @@ export async function searchSongs(query: string, page = 1, limit = 20) {
   return { results: merged.slice(0, limit), total: Math.max(total, merged.length) }
 }
 
+export async function searchRelatedSongs(query: string, minimum = 20) {
+  const queries = buildRelatedSongQueries(query)
+  const pageSize = Math.max(minimum, 20)
+  const maxPagesPerQuery = 3
+  const results: Song[] = []
+  let total = 0
+
+  for (const term of queries) {
+    for (let page = 1; page <= maxPagesPerQuery; page += 1) {
+      const data = await fetchApi<{ results: Song[]; total: number }>(
+        `/search/songs?query=${encodeURIComponent(term)}&page=${page}&limit=${pageSize}`
+      )
+
+      total = Math.max(total, data.total)
+      results.push(...data.results)
+
+      const merged = mergeUniqueSongs(results)
+      if (merged.length >= minimum) {
+        return { results: merged, total: Math.max(total, merged.length) }
+      }
+
+      if (data.results.length < pageSize) break
+    }
+  }
+
+  const merged = mergeUniqueSongs(results)
+  return { results: merged, total: Math.max(total, merged.length) }
+}
+
 export async function getSongSuggestions(query: string, limit = 8) {
   if (!query.trim()) return []
   const data = await searchSongs(query.trim(), 1, limit)
@@ -76,6 +140,13 @@ export function preferLanguageSongs(songs: Song[], language: string) {
 
   const matches = songs.filter((song) => normalizeSongLanguage(song.language) === language)
   return matches.length ? matches : songs
+}
+
+export function ensureMinimumSongs(songs: Song[], fallbackSongs: Song[], minimum = 20) {
+  if (songs.length >= minimum) return songs
+
+  const combined = mergeUniqueSongs([...songs, ...fallbackSongs])
+  return combined.slice(0, Math.max(minimum, songs.length))
 }
 
 function normalizeSongLanguage(lang?: string) {

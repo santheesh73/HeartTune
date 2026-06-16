@@ -19,7 +19,7 @@ interface PlayerContextType {
   duration: number
   volume: number
   shuffle: boolean
-  repeat: 'off' | 'all' | 'one'
+  repeat: 'off' | 'all'
   playSong: (song: Song, queue?: Song[]) => void
   togglePlay: () => void
   playNext: () => void
@@ -42,7 +42,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [duration, setDuration] = useState(0)
   const [volume, setVolumeState] = useState(0.8)
   const [shuffle, setShuffle] = useState(false)
-  const [repeat, setRepeat] = useState<'off' | 'all' | 'one'>('off')
+  const [repeat, setRepeat] = useState<'off' | 'all'>('off')
   const blobUrlRef = useRef<string | null>(null)
 
   const queueRef = useRef(queue)
@@ -115,7 +115,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     let nextIdx = idx + 1
     if (sh) {
-      nextIdx = Math.floor(Math.random() * q.length)
+      if (q.length === 1) {
+        setIsPlaying(false)
+        return
+      }
+
+      do {
+        nextIdx = Math.floor(Math.random() * q.length)
+      } while (nextIdx === idx)
     } else if (nextIdx >= q.length) {
       if (rep === 'all') nextIdx = 0
       else {
@@ -138,11 +145,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const onTime = () => setProgress(audio.currentTime)
     const onDuration = () => updateDuration(audio, currentSongRef.current)
     const onEnd = () => {
-      if (repeatRef.current === 'one') {
-        audio.currentTime = 0
-        audio.play()
-        return
-      }
       playNextRef.current()
     }
 
@@ -215,8 +217,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }
 
   const toggleShuffle = () => setShuffle((s) => !s)
-  const toggleRepeat = () =>
-    setRepeat((r) => (r === 'off' ? 'all' : r === 'all' ? 'one' : 'off'))
+  const toggleRepeat = () => setRepeat((r) => (r === 'off' ? 'all' : 'off'))
 
   return (
     <PlayerContext.Provider

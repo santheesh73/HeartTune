@@ -19,11 +19,16 @@ const navItems = [
   { to: '/downloads', icon: Download, label: 'Downloads' },
 ]
 
-export default function Sidebar() {
+interface SidebarProps {
+  navOpen?: boolean
+  onNavigate?: () => void
+}
+
+export default function Sidebar({ navOpen = false, onNavigate }: SidebarProps) {
   const { user, logout } = useAuth()
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${navOpen ? 'open' : ''}`} aria-hidden={!navOpen && undefined}>
       <div className="sidebar-brand">
         <motion.div
           className="brand-icon"
@@ -41,6 +46,7 @@ export default function Sidebar() {
             key={to}
             to={to}
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={onNavigate}
           >
             <Icon size={22} />
             <span>{label}</span>
@@ -60,7 +66,14 @@ export default function Sidebar() {
             <span className="user-email">{user?.email}</span>
           </div>
         </div>
-        <button className="logout-btn" onClick={logout} title="Log out">
+        <button
+          className="logout-btn"
+          onClick={() => {
+            logout()
+            onNavigate?.()
+          }}
+          title="Log out"
+        >
           <LogOut size={18} />
         </button>
       </div>

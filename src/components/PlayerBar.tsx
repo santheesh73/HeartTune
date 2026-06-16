@@ -8,16 +8,24 @@ import {
   VolumeX,
   Shuffle,
   Repeat,
-  Repeat1,
   Heart,
   Maximize2,
   Minimize2,
 } from 'lucide-react'
 import { getBestImage, getArtistNames, getSongDuration } from '../api/saavn'
 import { formatDuration } from '../utils/format'
+import { extractSongTheme, type SongTheme } from '../utils/theme'
 import { usePlayer } from '../context/PlayerContext'
 import { useLibrary } from '../context/LibraryContext'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
+
+const DEFAULT_THEME: SongTheme = {
+  accent: 'rgb(225, 29, 72)',
+  accentSoft: 'rgba(225, 29, 72, 0.16)',
+  accentGlow: 'rgba(225, 29, 72, 0.34)',
+  surface: 'rgb(54, 16, 24)',
+  surfaceStrong: 'rgb(16, 10, 12)',
+}
 
 export default function PlayerBar() {
   const {
@@ -41,6 +49,9 @@ export default function PlayerBar() {
   const [expanded, setExpanded] = useState(false)
   const [muted, setMuted] = useState(false)
   const [prevVolume, setPrevVolume] = useState(volume)
+  const [theme, setTheme] = useState<SongTheme>(DEFAULT_THEME)
+  const image = currentSong ? getBestImage(currentSong.image, '150x150') : ''
+  const fullscreenImage = currentSong ? getBestImage(currentSong.image, '500x500') || image : ''
 
   useEffect(() => {
     if (!expanded) return
@@ -58,9 +69,31 @@ export default function PlayerBar() {
     }
   }, [expanded])
 
-  if (!currentSong) return null
+  useEffect(() => {
+    if (!currentSong) {
+      setTheme(DEFAULT_THEME)
+      return
+    }
 
-  const image = getBestImage(currentSong.image, '150x150')
+    let cancelled = false
+
+    const updateTheme = async () => {
+      const nextTheme = await extractSongTheme(
+        fullscreenImage || image,
+        `${currentSong.id}-${currentSong.name}`
+      )
+
+      if (!cancelled) setTheme(nextTheme)
+    }
+
+    void updateTheme()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentSong, fullscreenImage, image])
+
+  if (!currentSong) return null
   const liked = isLiked(currentSong.id)
   const totalDuration = getSongDuration(currentSong, duration)
   const progressPct = totalDuration ? (progress / totalDuration) * 100 : 0
@@ -76,11 +109,20 @@ export default function PlayerBar() {
     }
   }
 
+  const themedStyle = {
+    '--song-accent': theme.accent,
+    '--song-accent-soft': theme.accentSoft,
+    '--song-accent-glow': theme.accentGlow,
+    '--song-surface': theme.surface,
+    '--song-surface-strong': theme.surfaceStrong,
+  } as CSSProperties
+
   return (
     <AnimatePresence>
       <>
         <motion.footer
           className="player-bar"
+          style={themedStyle}
           initial={{ y: 100 }}
           animate={{ y: 0 }}
           exit={{ y: 100 }}
@@ -125,12 +167,12 @@ export default function PlayerBar() {
               <button className="icon-btn" onClick={playNext}>
                 <SkipForward size={20} fill="currentColor" />
               </button>
-              <button
-                className={`icon-btn ${repeat !== 'off' ? 'active' : ''}`}
-                onClick={toggleRepeat}
-              >
-                {repeat === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
-              </button>
+                <button
+                  className={`icon-btn ${repeat !== 'off' ? 'active' : ''}`}
+                  onClick={toggleRepeat}
+                >
+                  <Repeat size={18} />
+                </button>
             </div>
 
             <div className="progress-bar-wrap">
@@ -177,6 +219,7 @@ export default function PlayerBar() {
           {expanded && (
             <motion.div
               className="player-fullscreen"
+              style={themedStyle}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -201,7 +244,7 @@ export default function PlayerBar() {
 
                 <div className="player-fullscreen-body">
                   <div className="player-fullscreen-art-wrap">
-                    <img src={getBestImage(currentSong.image, '500x500')} alt="" className="player-fullscreen-art" />
+                    <img src={fullscreenImage} alt="" className="player-fullscreen-art" />
                   </div>
 
                   <div className="player-fullscreen-content">
@@ -245,7 +288,7 @@ export default function PlayerBar() {
                         className={`icon-btn ${repeat !== 'off' ? 'active' : ''}`}
                         onClick={toggleRepeat}
                       >
-                        {repeat === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
+                        <Repeat size={20} />
                       </button>
                     </div>
 

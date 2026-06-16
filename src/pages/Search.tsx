@@ -3,7 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search as SearchIcon, Music, Disc, ListMusic, Globe2 } from 'lucide-react'
 import {
+  ensureMinimumSongs,
   searchSongs,
+  searchRelatedSongs,
   searchAlbums,
   searchPlaylists,
   getSongSuggestions,
@@ -19,6 +21,7 @@ import { useLanguage, type AppLanguage } from '../context/LanguageContext'
 import { usePlayer } from '../context/PlayerContext'
 
 type Tab = 'songs' | 'albums' | 'playlists'
+const RECENT_SEARCHES_KEY = 'heartwave_recent_searches'
 
 export default function Search() {
   const [params, setParams] = useSearchParams()
@@ -34,10 +37,31 @@ export default function Search() {
   const [searched, setSearched] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeSuggestion, setActiveSuggestion] = useState(-1)
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+
+    try {
+      return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]')
+    } catch {
+      return []
+    }
+  })
   const { language, setLanguage, languages } = useLanguage()
   const { playSong } = usePlayer()
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const saveRecentSearch = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+
+    setRecentSearches((prev) => {
+      const next = [trimmed, ...prev.filter((item) => item.toLowerCase() !== trimmed.toLowerCase())]
+
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next))
+      return next
+    })
+  }
 
   useEffect(() => {
     if (initialQ) doSearch(initialQ)
@@ -82,21 +106,31 @@ export default function Search() {
   }, [query, language])
 
   const doSearch = async (q: string) => {
-    if (!q.trim()) return
+    const trimmed = q.trim()
+    if (!trimmed) return
+
     setLoading(true)
     setSearched(true)
     setShowSuggestions(false)
-    setParams({ q })
+    setParams({ q: trimmed })
+    saveRecentSearch(trimmed)
     try {
-      const [s, a, p] = await Promise.all([
-        searchSongs(q, 1, 30),
-        searchAlbums(q, 1, 12),
-        searchPlaylists(q, 1, 12),
+      const [s, related, a, p] = await Promise.all([
+        searchSongs(trimmed, 1, 40),
+        searchRelatedSongs(trimmed, 20),
+        searchAlbums(trimmed, 1, 12),
+        searchPlaylists(trimmed, 1, 12),
       ])
-      const filteredSongs = preferLanguageSongs(filterFullSongs(s.results), language)
-      setSongs(filteredSongs)
+      const primarySongs = filterFullSongs(s.results)
+      const relatedSongs = filterFullSongs(related.results)
+      const languagePreferred = preferLanguageSongs(primarySongs, language)
+      const relatedPreferred = preferLanguageSongs(relatedSongs, language)
+      const finalSongs = ensureMinimumSongs(languagePreferred, relatedPreferred, 20)
+
+      setSongs(finalSongs)
       setAlbums(a.results)
       setPlaylists(p.results)
+      setQuery(trimmed)
     } catch {
       setSongs([])
       setAlbums([])
@@ -242,6 +276,27 @@ export default function Search() {
           )}
         </AnimatePresence>
       </div>
+
+      {recentSearches.length > 0 && (
+        <section className="recent-searches">
+          <div className="section-header">
+            <h2>Recent Searches</h2>
+          </div>
+          <div className="recent-search-list">
+            {recentSearches.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="recent-search-chip"
+                onClick={() => doSearch(item)}
+              >
+                <SearchIcon size={16} />
+                <span>{item}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {searched && (
         <div className="search-tabs">
