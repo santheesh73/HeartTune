@@ -1,61 +1,122 @@
 # 🎵 HeartTune
 
-HeartTune is a modern music streaming web application built using **Next.js, TypeScript, Supabase, and the JioSaavn API**. It provides a beautiful music experience where users can discover songs, stream music, create playlists, like tracks, manage downloads, and view recently played songs.
+<div align="center">
+
+![HeartTune Banner](https://img.shields.io/badge/HeartTune-Music%20Streaming%20Platform-E91E63?style=for-the-badge)
+
+### ❤️ Feel the Beat. Love the Music.
+
+A modern music streaming platform powered by **Next.js**, **Supabase**, and **JioSaavn API**.
+
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square\&logo=next.js)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square\&logo=typescript)]()
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-green?style=flat-square\&logo=supabase)]()
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)]()
+
+</div>
 
 ---
 
-## ✨ Features
+## ✨ About HeartTune
+
+HeartTune is a next-generation music streaming application designed to provide a smooth, responsive, and personalized listening experience.
+
+Discover millions of tracks, create playlists, save favorites, revisit recently played songs, and enjoy seamless music streaming with an elegant user interface.
+
+---
+
+## 🚀 Features
 
 ### 🎶 Music Streaming
-- Search songs, albums, artists, and playlists
-- Stream music instantly
-- High-quality audio playback
-- Responsive music player
 
-### ❤️ Personal Library
-- Like and unlike songs
-- Recently played history
-- Downloaded songs management
-- User-created playlists
+* Instant music playback
+* High-quality audio streaming
+* Search songs, albums, artists, and playlists
+* Dynamic music recommendations
 
-### 🔐 Authentication
-- Secure signup and login
-- Supabase Authentication
-- Persistent user sessions
-- Profile management
+### ❤️ Personal Music Library
 
-### 📱 Progressive Web App (PWA)
-- Installable on desktop and mobile
-- Standalone app experience
-- Offline-ready support
-- Fast performance
+* Like and save favorite songs
+* Recently played history
+* Download management
+* Custom playlist creation
 
-### 🎨 Modern UI
-- Dark theme design
-- Responsive layout
-- Smooth user experience
-- Spotify-inspired interface
+### 🔐 Authentication & Security
 
----
+* Secure user authentication
+* Persistent login sessions
+* User profile management
+* Protected user data
 
-## 🛠 Tech Stack
+### 📱 Progressive Web App
 
-- Next.js 16
-- TypeScript
-- Supabase
-- PostgreSQL
-- JioSaavn API
-- Tailwind CSS
-- Vercel
+* Install directly from Chrome
+* Mobile & desktop support
+* Native app-like experience
+* Fast performance
+
+### 🎨 Modern Experience
+
+* Beautiful dark theme
+* Responsive design
+* Smooth animations
+* Optimized performance
 
 ---
 
-## 📂 Project Structure
+## 🛠️ Tech Stack
+
+| Technology   | Purpose                   |
+| ------------ | ------------------------- |
+| Next.js      | Frontend Framework        |
+| TypeScript   | Type Safety               |
+| Supabase     | Authentication & Database |
+| PostgreSQL   | Data Storage              |
+| JioSaavn API | Music Data & Streaming    |
+| Tailwind CSS | Styling                   |
+| Vercel       | Deployment                |
+
+---
+
+## 📸 Core Modules
+
+### 🎵 Music Player
+
+* Stream songs instantly
+* Background playback
+* Audio controls
+
+### ❤️ Liked Songs
+
+* Save favorite tracks
+* Access anytime
+
+### 📁 Playlists
+
+* Create playlists
+* Organize music collections
+
+### ⏱ Recently Played
+
+* Track listening history
+* Resume favorite songs
+
+### 📥 Downloads
+
+* Manage downloaded songs
+* Offline-ready metadata storage
+
+---
+
+## 🏗 Project Structure
 
 ```bash
 HeartTune/
 │
 ├── public/
+│   ├── icons/
+│   ├── manifest.json
+│
 ├── src/
 │   ├── api/
 │   ├── components/
@@ -77,124 +138,44 @@ HeartTune/
 
 ## ⚙️ Environment Variables
 
-Create a `.env.local` file and add:
+Create a `.env.local` file:
 
 ```env
-VITE_SUPABASE_URL=YOUR_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-
 NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_ANON_KEY
-
 NEXT_PUBLIC_SAAVN_API_URL=https://saavn.sumit.co
 ```
 
 ---
 
-## 🗄️ Supabase Setup
+## 🚀 Getting Started
 
-### Profiles Table
-
-```sql
-create table profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  username text not null,
-  created_at timestamptz default now()
-);
-```
-
-### Liked Songs Table
-
-```sql
-create table liked_songs (
-  id bigint generated always as identity primary key,
-  user_id uuid references auth.users(id) on delete cascade,
-  song_id text not null,
-  song_title text,
-  artist_name text,
-  album_name text,
-  image_url text,
-  audio_url text,
-  duration integer,
-  source text,
-  created_at timestamptz default now()
-);
-```
-
-### Recently Played Table
-
-```sql
-create table recently_played (
-  id bigint generated always as identity primary key,
-  user_id uuid references auth.users(id) on delete cascade,
-  song_id text not null,
-  song_title text,
-  artist_name text,
-  album_name text,
-  image_url text,
-  audio_url text,
-  duration integer,
-  source text,
-  played_at timestamptz default now()
-);
-```
-
-### Downloads Table
-
-```sql
-create table downloads (
-  id bigint generated always as identity primary key,
-  user_id uuid references auth.users(id) on delete cascade,
-  song_id text not null,
-  song_title text,
-  artist_name text,
-  album_name text,
-  image_url text,
-  audio_url text,
-  duration integer,
-  source text,
-  downloaded_at timestamptz default now()
-);
-```
-
----
-
-## 🚀 Installation
-
-Clone the repository:
+### Clone Repository
 
 ```bash
 git clone https://github.com/yourusername/hearttune.git
 cd hearttune
 ```
 
-Install dependencies:
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
-Run development server:
+### Start Development Server
 
 ```bash
 npm run dev
 ```
 
-Open:
-
-```bash
-http://localhost:5175
-```
-
----
-
-## 🏗 Build for Production
+### Build Production Version
 
 ```bash
 npm run build
 ```
 
-Start production server:
+### Start Production Server
 
 ```bash
 npm start
@@ -202,70 +183,72 @@ npm start
 
 ---
 
-## ☁️ Deploy on Vercel
+## ☁️ Deployment
+
+### Deploy on Vercel
 
 1. Push project to GitHub
-
-```bash
-git add .
-git commit -m "Initial Commit"
-git push origin main
-```
-
 2. Import repository into Vercel
-
-3. Add Environment Variables:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-NEXT_PUBLIC_SAAVN_API_URL
-```
-
+3. Configure environment variables
 4. Click Deploy
+
+Your app will be live in minutes 🚀
 
 ---
 
-## 📱 Install as App
+## 📱 Install HeartTune
 
 ### Desktop
 
-- Open HeartTune in Chrome
-- Click Install HeartTune
-- Launch from Start Menu
+1. Open HeartTune in Chrome
+2. Click **Install HeartTune**
+3. Launch from Start Menu
 
-### Android
+### Mobile
 
-- Open HeartTune in Chrome
-- Tap Add to Home Screen
-- Install
+1. Open HeartTune in Chrome
+2. Tap **Add to Home Screen**
+3. Enjoy an app-like experience
 
 ---
 
-## 🔮 Future Enhancements
+## 🔮 Future Roadmap
 
-- AI Music Recommendations
-- Lyrics Support
-- Podcast Streaming
-- Collaborative Playlists
-- Social Sharing
-- Offline Downloads
+* 🤖 AI Music Recommendations
+* 🎤 Lyrics Support
+* 🎧 Podcast Streaming
+* 👥 Collaborative Playlists
+* 🌎 Social Sharing
+* 📈 Listening Analytics
 
 ---
 
 ## 👨‍💻 Developer
 
-**Tharun S**
+### Santheesh S
 
-B.Tech Artificial Intelligence & Data Science  
+**B.Tech Artificial Intelligence & Data Science**
+
 Sri Shakthi Institute of Engineering and Technology
 
 ---
 
-## 📄 License
+## ⭐ Support
 
-This project is licensed under the MIT License.
+If you like this project:
+
+🌟 Star the repository
+
+🍴 Fork the project
+
+🚀 Share it with others
 
 ---
 
-⭐ Star this repository if you found it useful!
+<div align="center">
+
+### ❤️ Built with passion for music lovers
+
+**HeartTune — Feel the Beat. Love the Music.**
+
+</div>
