@@ -1,139 +1,168 @@
-<div align="center">
-
 # 🎵 HeartTune
 
-<img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=700&size=32&duration=3000&pause=1000&color=FF4D6D&center=true&vCenter=true&width=800&lines=Feel+the+Beat+%F0%9F%8E%B5;Love+the+Music+%F0%9F%8E%A7;Stream+Millions+of+Songs+%F0%9F%94%A5;Your+Personal+Music+Universe+%E2%9C%A8" alt="Typing SVG" />
+> **Feel the Beat. Love the Music.**
 
-<br>
-
-<img src="https://img.shields.io/github/stars/YOUR_USERNAME/hearttune?style=for-the-badge&color=ff4d6d" />
-<img src="https://img.shields.io/github/forks/YOUR_USERNAME/hearttune?style=for-the-badge&color=6c63ff" />
-<img src="https://img.shields.io/github/license/YOUR_USERNAME/hearttune?style=for-the-badge&color=00c853" />
-
-<br><br>
-
-### 🎧 Modern Music Streaming Platform
-
-**Built with Next.js • Supabase • JioSaavn API**
-
-</div>
+HeartTune is a modern music streaming platform built with **Next.js**, **TypeScript**, **Supabase**, and the **JioSaavn API**. It delivers a seamless music experience with personalized libraries, playlists, downloads, and an installable Progressive Web App (PWA).
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Features
 
-🔗 **Coming Soon**
+### 🎶 Music Streaming
 
----
+* Search songs, albums, artists, and playlists
+* High-quality music playback
+* Fast and responsive audio player
 
-## ✨ Features
+### ❤️ Personal Library
 
-<table>
-<tr>
-<td>
+* Like and save songs
+* Recently played history
+* Download management
+* Custom playlists
 
-🎵 Music Streaming
+### 🔐 User Authentication
 
-❤️ Liked Songs
+* Secure sign up and login
+* Persistent sessions
+* User profile management
 
-📁 Playlists
+### 📱 Progressive Web App
 
-📥 Downloads
-
-⏱ Recently Played
-
-🔐 Authentication
-
-</td>
-<td>
-
-📱 PWA Support
-
-⚡ Fast Performance
-
-🌙 Dark Theme
-
-🎨 Modern UI
-
-☁️ Cloud Sync
-
-🚀 Vercel Deployment
-
-</td>
-</tr>
-</table>
+* Install directly from Chrome
+* Mobile and desktop support
+* App-like experience
 
 ---
 
 ## 🛠️ Tech Stack
 
-<p align="center">
-
-<img src="https://skillicons.dev/icons?i=nextjs,ts,tailwind,supabase,vercel,git,github,vscode" />
-
-</p>
-
----
-
-## 📊 Project Stats
-
-<p align="center">
-
-<img height="170" src="https://github-readme-stats.vercel.app/api?username=YOUR_USERNAME&show_icons=true&theme=radical"/>
-
-<img height="170" src="https://github-readme-streak-stats.herokuapp.com/?user=YOUR_USERNAME&theme=radical"/>
-
-</p>
+| Technology   | Purpose                   |
+| ------------ | ------------------------- |
+| Next.js      | Frontend Framework        |
+| TypeScript   | Type Safety               |
+| Supabase     | Authentication & Database |
+| PostgreSQL   | Data Storage              |
+| JioSaavn API | Music Streaming Data      |
+| Tailwind CSS | Styling                   |
+| Vercel       | Deployment                |
 
 ---
 
-## 📈 Languages Used
+## 📸 Screenshots
 
-<p align="center">
+### Home Page
 
-<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=YOUR_USERNAME&layout=compact&theme=radical"/>
+Add your screenshot here
 
-</p>
+```md
+![Home Page](./screenshots/home.png)
+```
+
+### Music Player
+
+```md
+![Player](./screenshots/player.png)
+```
+
+### Library
+
+```md
+![Library](./screenshots/library.png)
+```
 
 ---
 
-## 🎵 HeartTune Preview
+## ⚡ Installation
 
-<p align="center">
+Clone the repository:
 
-<img src="YOUR_APP_SCREENSHOT_URL" width="900"/>
+```bash
+git clone https://github.com/YOUR_USERNAME/hearttune.git
 
-</p>
+cd hearttune
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run locally:
+
+```bash
+npm run dev
+```
 
 ---
 
-## 🏗️ Built With
+## 🔑 Environment Variables
 
-- ⚛️ Next.js
-- 🔷 TypeScript
-- 🟢 Supabase
-- 🎵 JioSaavn API
-- 🎨 Tailwind CSS
-- ▲ Vercel
+Create a `.env.local` file:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_ANON_KEY
+
+NEXT_PUBLIC_SAAVN_API_URL=https://saavn.sumit.co
+```
+
+---
+
+## 🌐 Deployment
+
+HeartTune can be deployed easily on:
+
+* Vercel
+* Netlify
+* Railway
+
+Recommended:
+
+**Vercel**
+
+```bash
+npm run build
+```
+
+---
+
+## 🎯 Future Enhancements
+
+* AI Music Recommendations
+* Lyrics Support
+* Podcast Streaming
+* Collaborative Playlists
+* Listening Analytics
 
 ---
 
 ## 👨‍💻 Developer
 
-### Santheesh S
+**Santheesh S**
 
-🎓 B.Tech Artificial Intelligence & Data Science
+B.Tech Artificial Intelligence & Data Science
 
-🏫 Sri Shakthi Institute of Engineering and Technology
+Sri Shakthi Institute of Engineering and Technology
 
-🚀 Full Stack & AI Developer
+---
+
+## ⭐ Support
+
+If you like this project:
+
+* Star the repository ⭐
+* Fork the project 🍴
+* Share it with others 🚀
 
 ---
 
 <div align="center">
 
-### ❤️ Feel the Beat. Love the Music.
+### ❤️ HeartTune
 
-<img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=600&size=22&duration=4000&pause=1000&color=FF4D6D&center=true&vCenter=true&width=500&lines=Thank+you+for+visiting+HeartTune!;Give+this+project+a+⭐+if+you+like+it!" />
+**Feel the Beat. Love the Music.**
 
 </div>
