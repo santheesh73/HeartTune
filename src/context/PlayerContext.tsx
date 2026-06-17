@@ -9,6 +9,8 @@ import {
 } from 'react'
 import type { Song } from '../types'
 import { getPlayableAudioUrl, getSongDuration } from '../api/saavn'
+import { useAuth } from '../hooks/useAuth'
+import { addRecentlyPlayed } from '../services/recentlyPlayedService'
 import { getDownload } from '../utils/downloads'
 
 interface PlayerContextType {
@@ -33,6 +35,7 @@ interface PlayerContextType {
 const PlayerContext = createContext<PlayerContextType | null>(null)
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [currentSong, setCurrentSong] = useState<Song | null>(null)
   const [queue, setQueue] = useState<Song[]>([])
@@ -52,12 +55,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const currentSongRef = useRef<Song | null>(null)
   const playNextRef = useRef<() => void>(() => {})
 
-  queueRef.current = queue
-  queueIndexRef.current = queueIndex
-  shuffleRef.current = shuffle
-  repeatRef.current = repeat
-  currentSongRef.current = currentSong
-
   const updateDuration = useCallback((audio: HTMLAudioElement, song: Song | null) => {
     setDuration(getSongDuration(song, audio.duration))
   }, [])
@@ -76,20 +73,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const download = await getDownload(song.id)
     let src: string
-    let playableSong = song
+    let resolvedSong: Song
 
     if (download) {
       blobUrlRef.current = URL.createObjectURL(download.blob)
       src = blobUrlRef.current
-      playableSong = download.song
+      resolvedSong = download.song
     } else {
       const playable = await getPlayableAudioUrl(song)
-      playableSong = playable.song
+      resolvedSong = playable.song
       src = playable.url
     }
 
-    setCurrentSong(playableSong)
-    setDuration(playableSong.duration || 0)
+    setCurrentSong(resolvedSong)
+    setDuration(resolvedSong.duration || 0)
 
     audio.src = src
     audio.load()
@@ -97,11 +94,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     try {
       await audio.play()
       setIsPlaying(true)
-      updateDuration(audio, playableSong)
+      updateDuration(audio, resolvedSong)
+
+      if (user) {
+        void addRecentlyPlayed(user.id, resolvedSong)
+      }
     } catch {
       setIsPlaying(false)
     }
-  }, [updateDuration])
+  }, [updateDuration, user])
 
   const playNextInternal = useCallback(() => {
     const q = queueRef.current
@@ -131,16 +132,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     }
     setQueueIndex(nextIdx)
-    loadAndPlay(q[nextIdx])
+    void loadAndPlay(q[nextIdx])
   }, [loadAndPlay])
 
-  playNextRef.current = playNextInternal
+  useEffect(() => {
+    queueRef.current = queue
+    queueIndexRef.current = queueIndex
+    shuffleRef.current = shuffle
+    repeatRef.current = repeat
+    currentSongRef.current = currentSong
+    playNextRef.current = playNextInternal
+  }, [currentSong, playNextInternal, queue, queueIndex, repeat, shuffle])
 
   useEffect(() => {
     const audio = new Audio()
     audio.preload = 'auto'
     audioRef.current = audio
-    audio.volume = volume
+    audio.volume = 0.8
 
     const onTime = () => setProgress(audio.currentTime)
     const onDuration = () => updateDuration(audio, currentSongRef.current)
@@ -172,25 +180,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const idx = q.findIndex((s) => s.id === song.id)
     setQueue(q)
     setQueueIndex(idx >= 0 ? idx : 0)
-    loadAndPlay(song)
+    void loadAndPlay(song)
   }
 
   const togglePlay = () => {
-    const audio = audioRef.current!
+    const audio = audioRef.current
+    if (!audio) return
     if (!currentSong) return
     if (isPlaying) {
       audio.pause()
       setIsPlaying(false)
     } else {
-      audio.play()
-      setIsPlaying(true)
+      void audio.play().then(() => {
+        setIsPlaying(true)
+      }).catch(() => {
+        setIsPlaying(false)
+      })
     }
   }
 
   const playNext = () => playNextInternal()
 
   const playPrev = () => {
-    const audio = audioRef.current!
+    const audio = audioRef.current
+    if (!audio) return
     if (audio.currentTime > 3) {
       audio.currentTime = 0
       return
@@ -201,7 +214,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     let prevIdx = idx - 1
     if (prevIdx < 0) prevIdx = repeatRef.current === 'all' ? q.length - 1 : 0
     setQueueIndex(prevIdx)
-    loadAndPlay(q[prevIdx])
+    void loadAndPlay(q[prevIdx])
   }
 
   const seek = (time: number) => {

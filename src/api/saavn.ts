@@ -4,15 +4,24 @@ function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, '')
 }
 
-function getApiBase() {
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return trimTrailingSlash(import.meta.env.VITE_API_BASE_URL)
+function readEnv(name: string) {
+  if (typeof process !== 'undefined' && process.env?.[name]) {
+    return process.env[name]
   }
 
-  if (import.meta.env.DEV) return '/api'
+  return undefined
+}
+
+function getApiBase() {
+  const explicitBase = readEnv('NEXT_PUBLIC_API_BASE_URL') || readEnv('VITE_API_BASE_URL')
+  if (explicitBase) {
+    return trimTrailingSlash(explicitBase)
+  }
 
   const origin = trimTrailingSlash(
-    import.meta.env.VITE_SAAVN_API_URL || 'https://saavn.sumit.co'
+    readEnv('NEXT_PUBLIC_SAAVN_API_URL') ||
+    readEnv('VITE_SAAVN_API_URL') ||
+    'https://saavn.sumit.co'
   )
   return `${origin}/api`
 }

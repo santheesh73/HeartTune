@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Download, Play } from 'lucide-react'
 import { getAllDownloads, type DownloadedEntry } from '../utils/downloads'
@@ -10,19 +10,19 @@ export default function Downloads() {
   const [entries, setEntries] = useState<DownloadedEntry[]>([])
   const [loading, setLoading] = useState(true)
   const { playSong } = usePlayer()
-  const { removeDownloaded, refreshDownloads } = useLibrary()
+  const { removeDownloaded, refreshDownloads, downloadCount, downloadMetadataError } = useLibrary()
 
-  useEffect(() => {
-    loadDownloads()
-  }, [])
-
-  const loadDownloads = async () => {
+  const loadDownloads = useCallback(async () => {
     setLoading(true)
     const data = await getAllDownloads()
     setEntries(data)
     await refreshDownloads()
     setLoading(false)
-  }
+  }, [refreshDownloads])
+
+  useEffect(() => {
+    void loadDownloads()
+  }, [loadDownloads])
 
   const handleRemove = async (id: string) => {
     await removeDownloaded(id)
@@ -44,9 +44,11 @@ export default function Downloads() {
         <div>
           <p className="playlist-type">Offline</p>
           <h1>Downloaded Songs</h1>
-          <p className="playlist-meta">{entries.length} songs available offline</p>
+          <p className="playlist-meta">{downloadCount} songs tracked in your library</p>
         </div>
       </motion.div>
+
+      {downloadMetadataError ? <p className="login-error">{downloadMetadataError}</p> : null}
 
       {entries.length > 0 && (
         <motion.button

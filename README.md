@@ -1,4 +1,4 @@
-# HeartWave
+# HeartTune
 
 A Spotify-style music streaming app with a red and black theme, powered by the [JioSaavn API](https://saavn.sumit.co).
 
@@ -15,7 +15,7 @@ A Spotify-style music streaming app with a red and black theme, powered by the [
 ## Getting Started
 
 ```bash
-cd heartwave
+cd hearttune
 npm install
 npm run dev
 ```

@@ -1,92 +1,288 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
+import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { getCurrentUser, loginUser, logoutUser, signUpUser } from '../services/authService'
+import { createUserProfile, getProfile } from '../services/profileService'
+import { getErrorMessage, requireSupabase } from '../services/serviceUtils'
 import type { User } from '../types'
+
+interface AuthResult {
+  error: string | null
+  needsEmailConfirmation?: boolean
+}
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string) => boolean
-  register: (name: string, email: string, password: string) => boolean
-  logout: () => void
+  loading: boolean
+  error: string | null
   isAuthenticated: boolean
+  authAvailable: boolean
+  signUp: (name: string, email: string, password: string) => Promise<AuthResult>
+  login: (email: string, password: string) => Promise<AuthResult>
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
+const SUPABASE_UNAVAILABLE_MESSAGE =
+  'Unable to reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in `.env.local` or `.env`.'
 
-const USERS_KEY = 'heartwave-users'
-const SESSION_KEY = 'heartwave-session'
-
-interface StoredUser extends User {
-  password: string
+function isSupabaseNetworkError(error: unknown) {
+  return getErrorMessage(error).toLowerCase().includes('failed to fetch')
 }
 
-function loadUsers(): StoredUser[] {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || '[]')
-  } catch {
-    return []
+function buildAvatar(name: string) {
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
+}
+
+function mapUser(session: Session | null, fullName?: string | null, avatarUrl?: string | null): User | null {
+  const authUser = session?.user
+  if (!authUser || !authUser.email) return null
+
+  const fallbackName =
+    fullName ||
+    authUser.user_metadata?.full_name ||
+    authUser.user_metadata?.name ||
+    authUser.email.split('@')[0]
+
+  return {
+    id: authUser.id,
+    email: authUser.email,
+    name: fallbackName,
+    avatar: avatarUrl || buildAvatar(fallbackName),
   }
-}
-
-function saveUsers(users: StoredUser[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(isSupabaseConfigured)
+  const [authAvailable, setAuthAvailable] = useState(isSupabaseConfigured)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const session = localStorage.getItem(SESSION_KEY)
-    if (session) {
-      try {
-        setUser(JSON.parse(session))
-      } catch {
-        localStorage.removeItem(SESSION_KEY)
+  const hydrateSessionUser = useCallback(async (nextSession: Session | null) => {
+    setSession(nextSession)
+
+    if (!nextSession?.user) {
+      setUser(null)
+      return
+    }
+
+    setUser(mapUser(nextSession))
+
+    try {
+      let profile = await getProfile(nextSession.user.id)
+      const fallbackName =
+        nextSession.user.user_metadata?.full_name ||
+        nextSession.user.user_metadata?.name ||
+        nextSession.user.email?.split('@')[0] ||
+        'HeartTune User'
+
+      if (!profile) {
+        profile = await createUserProfile(nextSession.user.id, {
+          full_name: fallbackName,
+          username: nextSession.user.email?.split('@')[0] || fallbackName,
+          avatar_url: buildAvatar(fallbackName),
+        })
       }
+
+      setUser(mapUser(nextSession, profile.full_name, profile.avatar_url))
+    } catch (nextError) {
+      setError(getErrorMessage(nextError, 'Unable to load your profile'))
     }
   }, [])
 
-  const login = (email: string, password: string) => {
-    const users = loadUsers()
-    const found = users.find((u) => u.email === email && u.password === password)
-    if (!found) return false
-    const { password: _, ...userData } = found
-    setUser(userData)
-    localStorage.setItem(SESSION_KEY, JSON.stringify(userData))
-    return true
-  }
-
-  const register = (name: string, email: string, password: string) => {
-    const users = loadUsers()
-    if (users.some((u) => u.email === email)) return false
-    const newUser: StoredUser = {
-      id: crypto.randomUUID(),
-      name,
-      email,
-      password,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+  const refreshUser = useCallback(async () => {
+    if (!authAvailable || !isSupabaseConfigured || !supabase) {
+      setSession(null)
+      setUser(null)
+      setError(null)
+      setLoading(false)
+      return
     }
-    users.push(newUser)
-    saveUsers(users)
-    const { password: _, ...userData } = newUser
-    setUser(userData)
-    localStorage.setItem(SESSION_KEY, JSON.stringify(userData))
-    return true
-  }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem(SESSION_KEY)
-  }
+    setLoading(true)
+    setError(null)
 
-  return (
-    <AuthContext.Provider
-      value={{ user, login, register, logout, isAuthenticated: !!user }}
-    >
-      {children}
-    </AuthContext.Provider>
+    try {
+      const client = requireSupabase(supabase)
+      const currentUser = await getCurrentUser()
+      if (!currentUser) {
+        setSession(null)
+        setUser(null)
+        return
+      }
+
+      const { data, error: sessionError } = await client.auth.getSession()
+      if (sessionError) throw sessionError
+      await hydrateSessionUser(data.session)
+    } catch (nextError) {
+      if (isSupabaseNetworkError(nextError)) {
+        setAuthAvailable(false)
+        setError(SUPABASE_UNAVAILABLE_MESSAGE)
+        setUser(null)
+        return
+      }
+      setError(getErrorMessage(nextError, 'Unable to restore session'))
+      setUser(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [authAvailable, hydrateSessionUser])
+
+  useEffect(() => {
+    if (!authAvailable || !isSupabaseConfigured || !supabase) return
+
+    let mounted = true
+
+    const init = async () => {
+      try {
+        const client = requireSupabase(supabase)
+        const { data, error: sessionError } = await client.auth.getSession()
+        if (sessionError) throw sessionError
+        if (!mounted) return
+        await hydrateSessionUser(data.session)
+      } catch (nextError) {
+        if (mounted) {
+          if (isSupabaseNetworkError(nextError)) {
+            setAuthAvailable(false)
+            setError(SUPABASE_UNAVAILABLE_MESSAGE)
+            setUser(null)
+            return
+          }
+          setError(getErrorMessage(nextError, 'Unable to restore session'))
+          setUser(null)
+        }
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    void init()
+
+    const {
+      data: { subscription },
+    } = requireSupabase(supabase).auth.onAuthStateChange(
+      (_event: AuthChangeEvent, nextSession: Session | null) => {
+        void hydrateSessionUser(nextSession)
+      }
+    )
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [authAvailable, hydrateSessionUser])
+
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
+    setLoading(true)
+    setError(null)
+
+    if (!authAvailable) {
+      setLoading(false)
+      return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+    }
+
+    try {
+      const data = await signUpUser(email, password, name)
+
+      if (data.user) {
+        await createUserProfile(data.user.id, {
+          username: email.split('@')[0],
+          full_name: name,
+          avatar_url: buildAvatar(name),
+        })
+      }
+
+      await hydrateSessionUser(data.session)
+
+      return {
+        error: null,
+        needsEmailConfirmation: !data.session,
+      }
+    } catch (nextError) {
+      if (isSupabaseNetworkError(nextError)) {
+        setAuthAvailable(false)
+        setError(SUPABASE_UNAVAILABLE_MESSAGE)
+        return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+      }
+      const message = getErrorMessage(nextError, 'Unable to create account')
+      setError(message)
+      return { error: message }
+    } finally {
+      setLoading(false)
+    }
+  }, [authAvailable, hydrateSessionUser])
+
+  const login = useCallback(async (email: string, password: string) => {
+    setLoading(true)
+    setError(null)
+
+    if (!authAvailable) {
+      setLoading(false)
+      return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+    }
+
+    try {
+      const data = await loginUser(email, password)
+      await hydrateSessionUser(data.session)
+      return { error: null }
+    } catch (nextError) {
+      if (isSupabaseNetworkError(nextError)) {
+        setAuthAvailable(false)
+        setError(SUPABASE_UNAVAILABLE_MESSAGE)
+        return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+      }
+      const message = getErrorMessage(nextError, 'Unable to sign in')
+      setError(message)
+      return { error: message }
+    } finally {
+      setLoading(false)
+    }
+  }, [authAvailable, hydrateSessionUser])
+
+  const logout = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      await logoutUser()
+      setSession(null)
+      setUser(null)
+    } catch (nextError) {
+      setError(getErrorMessage(nextError, 'Unable to sign out'))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      error,
+      isAuthenticated: !!session?.user,
+      authAvailable,
+      signUp,
+      login,
+      logout,
+      refreshUser,
+    }),
+    [authAvailable, error, loading, logout, refreshUser, session?.user, signUp, login, user]
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuth() {
+export function useAuthContext() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx

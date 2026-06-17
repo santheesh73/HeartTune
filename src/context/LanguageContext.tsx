@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 
 export type AppLanguage =
   | 'all'
@@ -10,7 +10,7 @@ export type AppLanguage =
   | 'punjabi'
   | 'english'
 
-const STORAGE_KEY = 'heartwave-language'
+const STORAGE_KEY = 'hearttune-language'
 
 const LanguageContext = createContext<{
   language: AppLanguage
@@ -34,12 +34,11 @@ function isAppLanguage(v: unknown): v is AppLanguage {
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<AppLanguage>('all')
-
-  useEffect(() => {
+  const [language, setLanguageState] = useState<AppLanguage>(() => {
+    if (typeof window === 'undefined') return 'all'
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (isAppLanguage(saved)) setLanguageState(saved)
-  }, [])
+    return isAppLanguage(saved) ? saved : 'all'
+  })
 
   const setLanguage = (lang: AppLanguage) => {
     setLanguageState(lang)
@@ -59,4 +58,3 @@ export function useLanguage() {
   if (!ctx) throw new Error('useLanguage must be used within LanguageProvider')
   return ctx
 }
-

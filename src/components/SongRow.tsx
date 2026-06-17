@@ -69,14 +69,14 @@ export default function SongRow({
         <div className="song-row-actions">
           <button
             className={`icon-btn ${liked ? 'liked' : ''}`}
-            onClick={() => toggleLike(song)}
+            onClick={() => void toggleLike(song)}
             title={liked ? 'Remove from liked' : 'Like'}
           >
             <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
           </button>
 
           {onRemove ? (
-            <button className="icon-btn" onClick={onRemove} title="Remove download">
+            <button className="icon-btn" onClick={onRemove} title="Remove from playlist">
               <Trash2 size={18} />
             </button>
           ) : downloaded ? (

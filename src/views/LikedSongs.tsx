@@ -5,7 +5,7 @@ import { usePlayer } from '../context/PlayerContext'
 import SongRow from '../components/SongRow'
 
 export default function LikedSongs() {
-  const { likedSongs } = useLibrary()
+  const { likedSongs, likedSongsLoading, likedSongsError } = useLibrary()
   const { playSong } = usePlayer()
 
   return (
@@ -25,7 +25,13 @@ export default function LikedSongs() {
         </div>
       </motion.div>
 
-      {likedSongs.length > 0 && (
+      {likedSongsLoading ? (
+        <div className="loading-list">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="skeleton-row" />
+          ))}
+        </div>
+      ) : likedSongs.length > 0 && (
         <motion.button
           className="play-all-btn large"
           onClick={() => playSong(likedSongs[0], likedSongs)}
@@ -38,13 +44,15 @@ export default function LikedSongs() {
         </motion.button>
       )}
 
-      {likedSongs.length === 0 ? (
+      {likedSongsError ? <p className="login-error">{likedSongsError}</p> : null}
+
+      {!likedSongsLoading && likedSongs.length === 0 ? (
         <div className="empty-state">
           <Heart size={64} />
           <h2>Songs you like will appear here</h2>
           <p>Tap the heart icon on any song to save it</p>
         </div>
-      ) : (
+      ) : !likedSongsLoading ? (
         <div className="song-list">
           <div className="song-list-header">
             <span>#</span>
@@ -57,7 +65,7 @@ export default function LikedSongs() {
             <SongRow key={song.id} song={song} index={i} queue={likedSongs} />
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

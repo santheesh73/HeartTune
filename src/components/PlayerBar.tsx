@@ -70,10 +70,7 @@ export default function PlayerBar() {
   }, [expanded])
 
   useEffect(() => {
-    if (!currentSong) {
-      setTheme(DEFAULT_THEME)
-      return
-    }
+    if (!currentSong) return
 
     let cancelled = false
 
@@ -110,11 +107,11 @@ export default function PlayerBar() {
   }
 
   const themedStyle = {
-    '--song-accent': theme.accent,
-    '--song-accent-soft': theme.accentSoft,
-    '--song-accent-glow': theme.accentGlow,
-    '--song-surface': theme.surface,
-    '--song-surface-strong': theme.surfaceStrong,
+    '--song-accent': (currentSong ? theme : DEFAULT_THEME).accent,
+    '--song-accent-soft': (currentSong ? theme : DEFAULT_THEME).accentSoft,
+    '--song-accent-glow': (currentSong ? theme : DEFAULT_THEME).accentGlow,
+    '--song-surface': (currentSong ? theme : DEFAULT_THEME).surface,
+    '--song-surface-strong': (currentSong ? theme : DEFAULT_THEME).surfaceStrong,
   } as CSSProperties
 
   return (
@@ -135,7 +132,7 @@ export default function PlayerBar() {
             </div>
             <button
               className={`icon-btn ${liked ? 'liked' : ''}`}
-              onClick={() => toggleLike(currentSong)}
+              onClick={() => void toggleLike(currentSong)}
             >
               <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
             </button>
@@ -235,7 +232,7 @@ export default function PlayerBar() {
                 <div className="player-fullscreen-topbar">
                   <div>
                     <p className="player-fullscreen-kicker">Now Playing</p>
-                    <h2 className="player-fullscreen-heading">HeartWave Player</h2>
+                    <h2 className="player-fullscreen-heading">HeartTune Player</h2>
                   </div>
                   <button className="icon-btn player-fullscreen-close" onClick={() => setExpanded(false)}>
                     <Minimize2 size={20} />
@@ -256,7 +253,7 @@ export default function PlayerBar() {
                     <div className="player-fullscreen-actions">
                       <button
                         className={`icon-btn player-fullscreen-like ${liked ? 'liked' : ''}`}
-                        onClick={() => toggleLike(currentSong)}
+                        onClick={() => void toggleLike(currentSong)}
                       >
                         <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
                       </button>

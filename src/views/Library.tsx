@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Heart, Download, Clock, ChevronRight } from 'lucide-react'
 import { useLibrary } from '../context/LibraryContext'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Library() {
-  const { likedSongs, downloadedIds } = useLibrary()
+  const { likedSongs, downloadCount } = useLibrary()
   const { user } = useAuth()
 
   const items = [
@@ -20,7 +20,7 @@ export default function Library() {
       to: '/downloads',
       icon: Download,
       title: 'Downloaded',
-      desc: `${downloadedIds.size} songs offline`,
+      desc: `${downloadCount} songs tracked`,
       gradient: 'gradient-dark',
     },
   ]

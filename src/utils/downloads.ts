@@ -1,6 +1,6 @@
 import type { Song } from '../types'
 
-const DB_NAME = 'heartwave-downloads'
+const DB_NAME = 'hearttune-downloads'
 const STORE = 'songs'
 const DB_VERSION = 1
 

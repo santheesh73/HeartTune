@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PenLine } from 'lucide-react'
-import { getArtistAlbums, getLyricistsForLanguage, type LyricistRef } from '../api/saavn'
+import { getArtistAlbums, getLyricistsForLanguage } from '../api/saavn'
 import type { Album } from '../types'
 import AlbumCard from './AlbumCard'
 
@@ -9,15 +9,11 @@ interface LyricistAlbumsProps {
 }
 
 export default function LyricistAlbums({ language }: LyricistAlbumsProps) {
-  const lyricists = getLyricistsForLanguage(language)
-  const [selected, setSelected] = useState<LyricistRef>(lyricists[0])
+  const lyricists = useMemo(() => getLyricistsForLanguage(language), [language])
+  const [selectedId, setSelectedId] = useState<string>(lyricists[0]?.id ?? '')
   const [albums, setAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const list = getLyricistsForLanguage(language)
-    setSelected(list[0])
-  }, [language])
+  const selected = lyricists.find((lyricist) => lyricist.id === selectedId) ?? lyricists[0]
 
   useEffect(() => {
     if (!selected) return
@@ -50,7 +46,7 @@ export default function LyricistAlbums({ language }: LyricistAlbumsProps) {
             key={lyricist.id}
             type="button"
             className={`lyricist-chip ${selected.id === lyricist.id ? 'active' : ''}`}
-            onClick={() => setSelected(lyricist)}
+            onClick={() => setSelectedId(lyricist.id)}
           >
             {lyricist.name}
           </button>

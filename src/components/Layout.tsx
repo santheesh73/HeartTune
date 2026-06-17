@@ -46,7 +46,7 @@ export default function Layout() {
         </button>
         <div className="mobile-topbar-brand">
           <span className="mobile-topbar-kicker">Music streaming</span>
-          <strong>HeartWave</strong>
+          <strong>HeartTune</strong>
         </div>
       </header>
 

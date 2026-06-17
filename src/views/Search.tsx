@@ -1,27 +1,34 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search as SearchIcon, Music, Disc, ListMusic, Globe2 } from 'lucide-react'
+import { Search as SearchIcon, Music, Disc, Globe2 } from 'lucide-react'
 import {
   ensureMinimumSongs,
   searchSongs,
   searchRelatedSongs,
   searchAlbums,
-  searchPlaylists,
   getSongSuggestions,
   getBestImage,
   getArtistNames,
   filterFullSongs,
   preferLanguageSongs,
 } from '../api/saavn'
-import type { Song, Album, Playlist } from '../types'
+import type { Song, Album } from '../types'
 import SongRow from '../components/SongRow'
 import AlbumCard from '../components/AlbumCard'
 import { useLanguage, type AppLanguage } from '../context/LanguageContext'
 import { usePlayer } from '../context/PlayerContext'
 
-type Tab = 'songs' | 'albums' | 'playlists'
-const RECENT_SEARCHES_KEY = 'heartwave_recent_searches'
+type Tab = 'songs' | 'albums'
+const RECENT_SEARCHES_KEY = 'hearttune_recent_searches'
+
+function decodeHtmlEntities(value: string) {
+  if (typeof window === 'undefined') return value
+
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = value
+  return textarea.value
+}
 
 export default function Search() {
   const [params, setParams] = useSearchParams()
@@ -30,7 +37,6 @@ export default function Search() {
   const [activeTab, setActiveTab] = useState<Tab>('songs')
   const [songs, setSongs] = useState<Song[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
-  const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [suggestions, setSuggestions] = useState<Song[]>([])
   const [loading, setLoading] = useState(false)
   const [suggestLoading, setSuggestLoading] = useState(false)
@@ -51,8 +57,8 @@ export default function Search() {
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const saveRecentSearch = (value: string) => {
-    const trimmed = value.trim()
+  const saveRecentSearch = useCallback((value: string) => {
+    const trimmed = decodeHtmlEntities(value).trim()
     if (!trimmed) return
 
     setRecentSearches((prev) => {
@@ -61,11 +67,43 @@ export default function Search() {
       localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next))
       return next
     })
-  }
+  }, [])
+
+  const doSearch = useCallback(async (q: string) => {
+    const trimmed = decodeHtmlEntities(q).trim()
+    if (!trimmed) return
+
+    setLoading(true)
+    setSearched(true)
+    setShowSuggestions(false)
+    setParams({ q: trimmed })
+    saveRecentSearch(trimmed)
+    try {
+      const [s, related, a] = await Promise.all([
+        searchSongs(trimmed, 1, 40),
+        searchRelatedSongs(trimmed, 20),
+        searchAlbums(trimmed, 1, 12),
+      ])
+      const primarySongs = filterFullSongs(s.results)
+      const relatedSongs = filterFullSongs(related.results)
+      const languagePreferred = preferLanguageSongs(primarySongs, language)
+      const relatedPreferred = preferLanguageSongs(relatedSongs, language)
+      const finalSongs = ensureMinimumSongs(languagePreferred, relatedPreferred, 20)
+
+      setSongs(finalSongs)
+      setAlbums(a.results)
+      setQuery(trimmed)
+    } catch {
+      setSongs([])
+      setAlbums([])
+    } finally {
+      setLoading(false)
+    }
+  }, [language, saveRecentSearch, setParams])
 
   useEffect(() => {
-    if (initialQ) doSearch(initialQ)
-  }, [])
+    if (initialQ) void doSearch(initialQ)
+  }, [doSearch, initialQ])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -105,45 +143,11 @@ export default function Search() {
     }
   }, [query, language])
 
-  const doSearch = async (q: string) => {
-    const trimmed = q.trim()
-    if (!trimmed) return
-
-    setLoading(true)
-    setSearched(true)
-    setShowSuggestions(false)
-    setParams({ q: trimmed })
-    saveRecentSearch(trimmed)
-    try {
-      const [s, related, a, p] = await Promise.all([
-        searchSongs(trimmed, 1, 40),
-        searchRelatedSongs(trimmed, 20),
-        searchAlbums(trimmed, 1, 12),
-        searchPlaylists(trimmed, 1, 12),
-      ])
-      const primarySongs = filterFullSongs(s.results)
-      const relatedSongs = filterFullSongs(related.results)
-      const languagePreferred = preferLanguageSongs(primarySongs, language)
-      const relatedPreferred = preferLanguageSongs(relatedSongs, language)
-      const finalSongs = ensureMinimumSongs(languagePreferred, relatedPreferred, 20)
-
-      setSongs(finalSongs)
-      setAlbums(a.results)
-      setPlaylists(p.results)
-      setQuery(trimmed)
-    } catch {
-      setSongs([])
-      setAlbums([])
-      setPlaylists([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const selectSuggestion = (song: Song) => {
-    setQuery(song.name)
+    const decodedName = decodeHtmlEntities(song.name)
+    setQuery(decodedName)
     setShowSuggestions(false)
-    doSearch(song.name)
+    void doSearch(decodedName)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -152,7 +156,7 @@ export default function Search() {
       selectSuggestion(suggestions[activeSuggestion])
       return
     }
-    doSearch(query)
+    void doSearch(query)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -171,14 +175,12 @@ export default function Search() {
   }
 
   useEffect(() => {
-    if (searched) doSearch(query)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language])
+    if (searched && query.trim()) void doSearch(query)
+  }, [doSearch, query, searched])
 
   const tabs: { id: Tab; label: string; icon: typeof Music; count: number }[] = [
     { id: 'songs', label: 'Songs', icon: Music, count: songs.length },
     { id: 'albums', label: 'Albums', icon: Disc, count: albums.length },
-    { id: 'playlists', label: 'Playlists', icon: ListMusic, count: playlists.length },
   ]
 
   const showDropdown = showSuggestions && query.trim().length > 0
@@ -241,12 +243,19 @@ export default function Search() {
                 <div className="suggestion-status">No suggestions found</div>
               ) : (
                 suggestions.map((song, i) => (
-                  <button
+                  <div
                     key={song.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     className={`suggestion-item ${activeSuggestion === i ? 'active' : ''}`}
                     onMouseEnter={() => setActiveSuggestion(i)}
                     onClick={() => selectSuggestion(song)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        void selectSuggestion(song)
+                      }
+                    }}
                   >
                     <img
                       src={getBestImage(song.image, '150x150')}
@@ -269,7 +278,7 @@ export default function Search() {
                     >
                       <Music size={16} />
                     </button>
-                  </button>
+                  </div>
                 ))
               )}
             </motion.div>
@@ -287,8 +296,10 @@ export default function Search() {
               <button
                 key={item}
                 type="button"
-                className="recent-search-chip"
-                onClick={() => doSearch(item)}
+                className={`recent-search-chip ${
+                  item.toLowerCase() === query.trim().toLowerCase() ? 'active' : ''
+                }`}
+                onClick={() => void doSearch(item)}
               >
                 <SearchIcon size={16} />
                 <span>{item}</span>
@@ -353,23 +364,8 @@ export default function Search() {
         ) : (
           <p className="no-results">No albums found</p>
         )
-      ) : playlists.length ? (
-        <div className="album-grid">
-          {playlists.map((pl) => (
-            <a key={pl.id} href={`/playlist/${pl.id}`} className="album-card">
-              <div className="album-card-image-wrap">
-                <img
-                  src={pl.image?.[pl.image.length - 1]?.url}
-                  alt={pl.name}
-                  className="album-card-image"
-                />
-              </div>
-              <h3 className="album-card-title">{pl.name}</h3>
-            </a>
-          ))}
-        </div>
       ) : (
-        <p className="no-results">No playlists found</p>
+        <p className="no-results">No albums found</p>
       )}
     </div>
   )

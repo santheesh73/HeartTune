@@ -9,7 +9,7 @@ import {
   LogOut,
   Music2,
 } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Home' },
@@ -37,7 +37,7 @@ export default function Sidebar({ navOpen = false, onNavigate }: SidebarProps) {
         >
           <Music2 size={28} />
         </motion.div>
-        <h1 className="brand-name">HeartWave</h1>
+        <h1 className="brand-name">HeartTune</h1>
       </div>
 
       <nav className="sidebar-nav">
@@ -54,29 +54,31 @@ export default function Sidebar({ navOpen = false, onNavigate }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="user-card">
-          <img
-            src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`}
-            alt={user?.name}
-            className="user-avatar"
-          />
-          <div className="user-info">
-            <span className="user-name">{user?.name}</span>
-            <span className="user-email">{user?.email}</span>
+      {user ? (
+        <div className="sidebar-footer">
+          <div className="user-card">
+            <img
+              src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+              alt={user.name}
+              className="user-avatar"
+            />
+            <div className="user-info">
+              <span className="user-name">{user.name}</span>
+              <span className="user-email">{user.email}</span>
+            </div>
           </div>
+          <button
+            className="logout-btn"
+            onClick={() => {
+              void logout()
+              onNavigate?.()
+            }}
+            title="Log out"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
-        <button
-          className="logout-btn"
-          onClick={() => {
-            logout()
-            onNavigate?.()
-          }}
-          title="Log out"
-        >
-          <LogOut size={18} />
-        </button>
-      </div>
+      ) : null}
     </aside>
   )
 }

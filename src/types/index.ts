@@ -1,3 +1,9 @@
+import type {
+  PlaylistRow,
+  ProfileRow,
+  RecentlyPlayedRow,
+} from './database'
+
 export interface ImageQuality {
   quality: string
   url: string
@@ -62,6 +68,27 @@ export interface Playlist {
   songs?: Song[]
   image: ImageQuality[]
   url?: string
+}
+
+export type Profile = ProfileRow
+
+export interface UserPlaylist extends PlaylistRow {
+  songCount?: number
+  songs?: Song[]
+}
+
+export interface RecentlyPlayedEntry extends RecentlyPlayedRow {
+  played_at: string
+}
+
+export interface DownloadMetadata {
+  id: string
+  user_id: string
+  song_id: string
+  song_title: string
+  artist_name: string
+  image_url: string | null
+  downloaded_at: string
 }
 
 export interface User {
