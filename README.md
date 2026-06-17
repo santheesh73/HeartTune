@@ -176,7 +176,7 @@ Deploy in minutes using Vercel.
 
 <div align="center">
 
-## Tharun S
+## Santheesh S
 
 🎓 Artificial Intelligence & Data Science
 
