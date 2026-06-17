@@ -39,3 +39,14 @@ export async function getDownloads(userId: string) {
   assertNoSupabaseError(error, 'Unable to load downloads metadata')
   return (data || []) as DownloadMetadata[]
 }
+
+export async function removeDownloadMetadata(userId: string, songId: string) {
+  const client = requireSupabase(supabase)
+  const { error } = await client
+    .from('downloads')
+    .delete()
+    .eq('user_id', userId)
+    .eq('song_id', songId)
+
+  assertNoSupabaseError(error, 'Unable to remove download metadata')
+}

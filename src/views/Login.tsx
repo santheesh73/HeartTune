@@ -92,7 +92,7 @@ export default function Login() {
             animate={{ rotate: [0, 5, -5, 0] }}
             transition={{ repeat: Infinity, duration: 4 }}
           >
-            <Music2 size={40} />
+            <img src="/favicon.png" alt="HeartTune Logo" />
           </motion.div>
           <h1>HeartTune</h1>
           <p>Feel the beat. Love the music.</p>

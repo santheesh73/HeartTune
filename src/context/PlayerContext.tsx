@@ -16,6 +16,7 @@ import { getDownload } from '../utils/downloads'
 interface PlayerContextType {
   currentSong: Song | null
   queue: Song[]
+  queueIndex: number
   isPlaying: boolean
   progress: number
   duration: number
@@ -23,6 +24,8 @@ interface PlayerContextType {
   shuffle: boolean
   repeat: 'off' | 'all'
   playSong: (song: Song, queue?: Song[]) => void
+  addToQueue: (song: Song) => boolean
+  playQueueAt: (index: number) => void
   togglePlay: () => void
   playNext: () => void
   playPrev: () => void
@@ -183,6 +186,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     void loadAndPlay(song)
   }
 
+  const addToQueue = (song: Song) => {
+    const activeSong = currentSongRef.current
+    const activeQueue = queueRef.current
+
+    if (!activeSong) {
+      setQueue([song])
+      setQueueIndex(0)
+      void loadAndPlay(song)
+      return true
+    }
+
+    const baseQueue = activeQueue.length ? activeQueue : [activeSong]
+    const alreadyQueued = baseQueue.some((queuedSong) => queuedSong.id === song.id)
+
+    if (alreadyQueued) {
+      return false
+    }
+
+    setQueue([...baseQueue, song])
+    return true
+  }
+
+  const playQueueAt = (index: number) => {
+    const activeQueue = queueRef.current
+    if (index < 0 || index >= activeQueue.length) return
+
+    setQueueIndex(index)
+    void loadAndPlay(activeQueue[index])
+  }
+
   const togglePlay = () => {
     const audio = audioRef.current
     if (!audio) return
@@ -237,6 +270,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       value={{
         currentSong,
         queue,
+        queueIndex,
         isPlaying,
         progress,
         duration,
@@ -244,6 +278,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         shuffle,
         repeat,
         playSong,
+        addToQueue,
+        playQueueAt,
         togglePlay,
         playNext,
         playPrev,

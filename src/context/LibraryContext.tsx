@@ -12,7 +12,7 @@ import type { Song } from '../types'
 import { getPlayableAudioUrl } from '../api/saavn'
 import { useAuth } from '../hooks/useAuth'
 import { useLikedSongs } from '../hooks/useLikedSongs'
-import { getDownloads, saveDownloadMetadata } from '../services/downloadService'
+import { getDownloads, removeDownloadMetadata, saveDownloadMetadata } from '../services/downloadService'
 import { getErrorMessage } from '../services/serviceUtils'
 import { getAllDownloads, getDownload, removeDownload, saveDownload } from '../utils/downloads'
 
@@ -54,18 +54,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const refreshDownloads = useCallback(async () => {
     const entries = await getAllDownloads()
     setDownloadedIds(new Set(entries.map((entry) => entry.id)))
+    setDownloadCount(entries.length)
 
     if (!user) {
-      setDownloadCount(entries.length)
       return
     }
 
     try {
-      const metadata = await getDownloads(user.id)
-      setDownloadCount(metadata.length || entries.length)
+      await getDownloads(user.id)
       setDownloadMetadataError(null)
     } catch (error) {
-      setDownloadCount(entries.length)
       setDownloadMetadataError(getErrorMessage(error, 'Unable to load download metadata'))
     }
   }, [user])
@@ -135,8 +133,17 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       return next
     })
 
+    if (user) {
+      try {
+        await removeDownloadMetadata(user.id, id)
+        setDownloadMetadataError(null)
+      } catch (error) {
+        setDownloadMetadataError(getErrorMessage(error, 'Unable to remove download metadata'))
+      }
+    }
+
     await refreshDownloads()
-  }, [refreshDownloads])
+  }, [refreshDownloads, user])
 
   const getLocalUrl = useCallback(async (id: string) => {
     if (blobCache.current.has(id)) return blobCache.current.get(id) || null

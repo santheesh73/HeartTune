@@ -28,12 +28,43 @@ function getApiBase() {
 
 const BASE = getApiBase()
 
+function decodeHtmlEntities(value: string) {
+  return value
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/?[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function sanitizeApiValue<T>(value: T): T {
+  if (typeof value === 'string') {
+    return decodeHtmlEntities(value) as T
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeApiValue(item)) as T
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, sanitizeApiValue(item)])
+    ) as T
+  }
+
+  return value
+}
+
 async function fetchApi<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`)
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   const json = await res.json()
   if (!json.success) throw new Error('API request failed')
-  return json.data as T
+  return sanitizeApiValue(json.data) as T
 }
 
 function normalizeSearchQuery(query: string) {

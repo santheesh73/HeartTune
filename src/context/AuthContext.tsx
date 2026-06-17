@@ -10,7 +10,7 @@ import {
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { getCurrentUser, loginUser, logoutUser, signUpUser } from '../services/authService'
-import { createUserProfile, getProfile } from '../services/profileService'
+import { createUserProfile, getProfile, updateProfile } from '../services/profileService'
 import { getErrorMessage, requireSupabase } from '../services/serviceUtils'
 import type { User } from '../types'
 
@@ -29,6 +29,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<AuthResult>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
+  updateAvatar: (avatarUrl: string) => Promise<AuthResult>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -264,6 +265,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const updateAvatar = useCallback(async (avatarUrl: string) => {
+    if (!session?.user) {
+      return { error: 'Please sign in to update your avatar.' }
+    }
+
+    if (!authAvailable) {
+      return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+    }
+
+    setError(null)
+
+    try {
+      const fallbackName =
+        user?.name ||
+        session.user.user_metadata?.full_name ||
+        session.user.user_metadata?.name ||
+        session.user.email?.split('@')[0] ||
+        'HeartTune User'
+
+      const nextAvatar = avatarUrl.trim()
+      const existingProfile = await getProfile(session.user.id)
+      const profile = existingProfile
+        ? await updateProfile(session.user.id, {
+            avatar_url: nextAvatar || null,
+          })
+        : await createUserProfile(session.user.id, {
+            full_name: fallbackName,
+            username: session.user.email?.split('@')[0] || fallbackName,
+            avatar_url: nextAvatar || buildAvatar(fallbackName),
+          })
+
+      setUser(mapUser(session, profile.full_name, profile.avatar_url))
+      return { error: null }
+    } catch (nextError) {
+      if (isSupabaseNetworkError(nextError)) {
+        setAuthAvailable(false)
+        setError(SUPABASE_UNAVAILABLE_MESSAGE)
+        return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+      }
+
+      const message = getErrorMessage(nextError, 'Unable to update avatar')
+      setError(message)
+      return { error: message }
+    }
+  }, [authAvailable, session, user])
+
   const value = useMemo(
     () => ({
       user,
@@ -275,8 +322,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       refreshUser,
+      updateAvatar,
     }),
-    [authAvailable, error, loading, logout, refreshUser, session?.user, signUp, login, user]
+    [authAvailable, error, loading, logout, refreshUser, session?.user, signUp, login, updateAvatar, user]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

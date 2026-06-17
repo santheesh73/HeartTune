@@ -10,7 +10,9 @@ import {
   Repeat,
   Heart,
   Maximize2,
-  Minimize2,
+  ChevronDown,
+  MoreVertical,
+  ListMusic,
 } from 'lucide-react'
 import { getBestImage, getArtistNames, getSongDuration } from '../api/saavn'
 import { formatDuration } from '../utils/format'
@@ -30,12 +32,15 @@ const DEFAULT_THEME: SongTheme = {
 export default function PlayerBar() {
   const {
     currentSong,
+    queue,
+    queueIndex,
     isPlaying,
     progress,
     duration,
     volume,
     shuffle,
     repeat,
+    playQueueAt,
     togglePlay,
     playNext,
     playPrev,
@@ -50,8 +55,10 @@ export default function PlayerBar() {
   const [muted, setMuted] = useState(false)
   const [prevVolume, setPrevVolume] = useState(volume)
   const [theme, setTheme] = useState<SongTheme>(DEFAULT_THEME)
+  const [showQueue, setShowQueue] = useState(false)
   const image = currentSong ? getBestImage(currentSong.image, '150x150') : ''
   const fullscreenImage = currentSong ? getBestImage(currentSong.image, '500x500') || image : ''
+  const upcomingQueue = queue.filter((_, index) => index > queueIndex)
 
   useEffect(() => {
     if (!expanded) return
@@ -89,6 +96,15 @@ export default function PlayerBar() {
       cancelled = true
     }
   }, [currentSong, fullscreenImage, image])
+
+  useEffect(() => {
+    if (!currentSong || typeof window === 'undefined') return
+
+    // Open the fullscreen player directly on mobile so users skip the compact player view.
+    if (window.innerWidth <= 900) {
+      setExpanded(true)
+    }
+  }, [currentSong])
 
   if (!currentSong) return null
   const liked = isLiked(currentSong.id)
@@ -194,6 +210,9 @@ export default function PlayerBar() {
             <button className="icon-btn" onClick={() => setExpanded(true)}>
               <Maximize2 size={18} />
             </button>
+            <button className={`icon-btn ${showQueue ? 'active' : ''}`} onClick={() => setShowQueue((value) => !value)}>
+              <ListMusic size={18} />
+            </button>
             <button className="icon-btn" onClick={toggleMute}>
               {muted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
             </button>
@@ -210,6 +229,35 @@ export default function PlayerBar() {
               className="volume-slider"
             />
           </div>
+
+          {showQueue ? (
+            <div className="player-queue-panel">
+              <div className="player-queue-header">
+                <span>Up Next</span>
+                <span>{upcomingQueue.length} songs</span>
+              </div>
+              {upcomingQueue.length ? (
+                <div className="player-queue-list">
+                  {upcomingQueue.slice(0, 6).map((song, index) => (
+                    <button
+                      key={`${song.id}-${queueIndex + index + 1}`}
+                      type="button"
+                      className="player-queue-item"
+                      onClick={() => playQueueAt(queueIndex + index + 1)}
+                    >
+                      <img src={getBestImage(song.image, '150x150')} alt="" className="player-queue-thumb" />
+                      <span className="player-queue-meta">
+                        <strong>{song.name}</strong>
+                        <small>{getArtistNames(song)}</small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="player-queue-empty">Add songs to queue from any song card or row.</p>
+              )}
+            </div>
+          ) : null}
         </motion.footer>
 
         <AnimatePresence>
@@ -217,75 +265,56 @@ export default function PlayerBar() {
             <motion.div
               className="player-fullscreen"
               style={themedStyle}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
-              <div className="player-fullscreen-backdrop" onClick={() => setExpanded(false)} />
-              <motion.div
-                className="player-fullscreen-panel"
-                initial={{ opacity: 0, y: 30, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.98 }}
-                transition={{ duration: 0.2 }}
-              >
+              <div className="player-fullscreen-bg">
+                <img src={fullscreenImage} alt="" />
+                <div className="player-fullscreen-overlay"></div>
+              </div>
+
+              <div className="player-fullscreen-content-wrapper min-h-screen h-screen w-full flex flex-col justify-between">
                 <div className="player-fullscreen-topbar">
-                  <div>
-                    <p className="player-fullscreen-kicker">Now Playing</p>
-                    <h2 className="player-fullscreen-heading">HeartTune Player</h2>
+                  <button className="icon-btn" onClick={() => setExpanded(false)}>
+                    <ChevronDown size={28} color="white" />
+                  </button>
+                  <div className="player-fullscreen-header-text">
+                    <p className="kicker">Playing From:</p>
+                    <p className="context">HeartTune</p>
                   </div>
-                  <button className="icon-btn player-fullscreen-close" onClick={() => setExpanded(false)}>
-                    <Minimize2 size={20} />
+                  <button className="icon-btn">
+                    <MoreVertical size={24} color="white" />
                   </button>
                 </div>
 
-                <div className="player-fullscreen-body">
-                  <div className="player-fullscreen-art-wrap">
-                    <img src={fullscreenImage} alt="" className="player-fullscreen-art" />
+                <div className="player-fullscreen-main h-screen w-full flex flex-col flex-1">
+                  <div className="player-fullscreen-stage">
+                    <div className="player-fullscreen-middle flex-1">
+                      <motion.div
+                        className="player-fullscreen-art-shell"
+                        animate={{ scale: [1, 1.015, 1] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        <img src={fullscreenImage} alt="" className="player-fullscreen-artwork" />
+                      </motion.div>
+                    </div>
                   </div>
 
-                  <div className="player-fullscreen-content">
-                    <div className="player-fullscreen-meta">
-                      <p className="player-fullscreen-title">{currentSong.name}</p>
-                      <p className="player-fullscreen-artist">{getArtistNames(currentSong)}</p>
-                    </div>
-
-                    <div className="player-fullscreen-actions">
+                  <div className="player-fullscreen-bottom">
+                    <div className="player-fullscreen-info-row">
+                      <div className="player-fullscreen-middle-info">
+                        <h2 className="title">{currentSong.name}</h2>
+                        <p className="artist">{getArtistNames(currentSong)}</p>
+                      </div>
                       <button
-                        className={`icon-btn player-fullscreen-like ${liked ? 'liked' : ''}`}
+                        className={`icon-btn fullscreen-heart-btn ${liked ? 'liked' : ''}`}
                         onClick={() => void toggleLike(currentSong)}
+                        title={liked ? 'Remove from liked' : 'Like song'}
                       >
-                        <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
-                      </button>
-                      <button
-                        className={`icon-btn ${shuffle ? 'active' : ''}`}
-                        onClick={toggleShuffle}
-                      >
-                        <Shuffle size={20} />
-                      </button>
-                      <button className="icon-btn" onClick={playPrev}>
-                        <SkipBack size={24} fill="currentColor" />
-                      </button>
-                      <motion.button
-                        className="play-btn-main player-fullscreen-play"
-                        onClick={togglePlay}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {isPlaying ? (
-                          <Pause size={28} fill="currentColor" />
-                        ) : (
-                          <Play size={28} fill="currentColor" />
-                        )}
-                      </motion.button>
-                      <button className="icon-btn" onClick={playNext}>
-                        <SkipForward size={24} fill="currentColor" />
-                      </button>
-                      <button
-                        className={`icon-btn ${repeat !== 'off' ? 'active' : ''}`}
-                        onClick={toggleRepeat}
-                      >
-                        <Repeat size={20} />
+                        <Heart size={24} fill={liked ? 'currentColor' : 'none'} />
                       </button>
                     </div>
 
@@ -308,26 +337,63 @@ export default function PlayerBar() {
                       </div>
                     </div>
 
-                    <div className="player-fullscreen-volume">
-                      <button className="icon-btn" onClick={toggleMute}>
-                        {muted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                    <div className="player-fullscreen-controls">
+                      <button className={`icon-btn control-btn ${shuffle ? 'active' : ''}`} onClick={toggleShuffle}>
+                        <Shuffle size={24} />
                       </button>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={muted ? 0 : volume}
-                        onChange={(e) => {
-                          setVolume(parseFloat(e.target.value))
-                          setMuted(false)
-                        }}
-                        className="volume-slider player-fullscreen-volume-slider"
-                      />
+                      <button className="icon-btn control-btn" onClick={playPrev}>
+                        <SkipBack size={30} fill="white" color="white" />
+                      </button>
+                      <motion.button
+                        className="play-btn-circle"
+                        onClick={togglePlay}
+                        whileHover={{ scale: 1.05, boxShadow: '0 0 32px rgba(255, 45, 85, 0.45)' }}
+                        whileTap={{ scale: 0.96 }}
+                      >
+                        {isPlaying ? (
+                          <Pause size={34} fill="white" color="white" />
+                        ) : (
+                          <Play size={34} fill="white" color="white" />
+                        )}
+                      </motion.button>
+                      <button className="icon-btn control-btn" onClick={playNext}>
+                        <SkipForward size={30} fill="white" color="white" />
+                      </button>
+                      <button className={`icon-btn control-btn ${repeat !== 'off' ? 'active' : ''}`} onClick={toggleRepeat}>
+                        <Repeat size={24} />
+                      </button>
                     </div>
+
+                    <div className="player-fullscreen-queue">
+                      <div className="player-queue-header">
+                        <span>Up Next</span>
+                        <span>{upcomingQueue.length} songs</span>
+                      </div>
+                      {upcomingQueue.length ? (
+                        <div className="player-queue-list fullscreen">
+                          {upcomingQueue.slice(0, 5).map((song, index) => (
+                            <button
+                              key={`${song.id}-${queueIndex + index + 1}-fullscreen`}
+                              type="button"
+                              className="player-queue-item"
+                              onClick={() => playQueueAt(queueIndex + index + 1)}
+                            >
+                              <img src={getBestImage(song.image, '150x150')} alt="" className="player-queue-thumb" />
+                              <span className="player-queue-meta">
+                                <strong>{song.name}</strong>
+                                <small>{getArtistNames(song)}</small>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="player-queue-empty">Your queue will appear here.</p>
+                      )}
+                    </div>
+
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

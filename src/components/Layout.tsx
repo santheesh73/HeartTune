@@ -3,6 +3,7 @@ import { Menu, X } from 'lucide-react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import PlayerBar from './PlayerBar'
+import InstallButton from './InstallButton'
 
 export default function Layout() {
   const [navOpen, setNavOpen] = useState(false)
@@ -47,6 +48,9 @@ export default function Layout() {
         <div className="mobile-topbar-brand">
           <span className="mobile-topbar-kicker">Music streaming</span>
           <strong>HeartTune</strong>
+        </div>
+        <div className="mobile-topbar-actions">
+          <InstallButton className="mobile-install-btn" compact />
         </div>
       </header>
 
