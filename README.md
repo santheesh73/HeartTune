@@ -1,225 +1,120 @@
-# 🎵 HeartTune
-
 <div align="center">
 
-![HeartTune Banner](https://img.shields.io/badge/HeartTune-Music%20Streaming%20Platform-E91E63?style=for-the-badge)
+# 🎵 HeartTune
 
-### ❤️ Feel the Beat. Love the Music.
+<img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=700&size=32&duration=3000&pause=1000&color=FF4D6D&center=true&vCenter=true&width=800&lines=Feel+the+Beat+%F0%9F%8E%B5;Love+the+Music+%F0%9F%8E%A7;Stream+Millions+of+Songs+%F0%9F%94%A5;Your+Personal+Music+Universe+%E2%9C%A8" alt="Typing SVG" />
 
-A modern music streaming platform powered by **Next.js**, **Supabase**, and **JioSaavn API**.
+<br>
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square\&logo=next.js)]()
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square\&logo=typescript)]()
-[![Supabase](https://img.shields.io/badge/Supabase-Backend-green?style=flat-square\&logo=supabase)]()
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)]()
+<img src="https://img.shields.io/github/stars/YOUR_USERNAME/hearttune?style=for-the-badge&color=ff4d6d" />
+<img src="https://img.shields.io/github/forks/YOUR_USERNAME/hearttune?style=for-the-badge&color=6c63ff" />
+<img src="https://img.shields.io/github/license/YOUR_USERNAME/hearttune?style=for-the-badge&color=00c853" />
+
+<br><br>
+
+### 🎧 Modern Music Streaming Platform
+
+**Built with Next.js • Supabase • JioSaavn API**
 
 </div>
 
 ---
 
-## ✨ About HeartTune
+## 🚀 Live Demo
 
-HeartTune is a next-generation music streaming application designed to provide a smooth, responsive, and personalized listening experience.
-
-Discover millions of tracks, create playlists, save favorites, revisit recently played songs, and enjoy seamless music streaming with an elegant user interface.
+🔗 **Coming Soon**
 
 ---
 
-## 🚀 Features
+## ✨ Features
 
-### 🎶 Music Streaming
+<table>
+<tr>
+<td>
 
-* Instant music playback
-* High-quality audio streaming
-* Search songs, albums, artists, and playlists
-* Dynamic music recommendations
+🎵 Music Streaming
 
-### ❤️ Personal Music Library
+❤️ Liked Songs
 
-* Like and save favorite songs
-* Recently played history
-* Download management
-* Custom playlist creation
+📁 Playlists
 
-### 🔐 Authentication & Security
+📥 Downloads
 
-* Secure user authentication
-* Persistent login sessions
-* User profile management
-* Protected user data
+⏱ Recently Played
 
-### 📱 Progressive Web App
+🔐 Authentication
 
-* Install directly from Chrome
-* Mobile & desktop support
-* Native app-like experience
-* Fast performance
+</td>
+<td>
 
-### 🎨 Modern Experience
+📱 PWA Support
 
-* Beautiful dark theme
-* Responsive design
-* Smooth animations
-* Optimized performance
+⚡ Fast Performance
+
+🌙 Dark Theme
+
+🎨 Modern UI
+
+☁️ Cloud Sync
+
+🚀 Vercel Deployment
+
+</td>
+</tr>
+</table>
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Technology   | Purpose                   |
-| ------------ | ------------------------- |
-| Next.js      | Frontend Framework        |
-| TypeScript   | Type Safety               |
-| Supabase     | Authentication & Database |
-| PostgreSQL   | Data Storage              |
-| JioSaavn API | Music Data & Streaming    |
-| Tailwind CSS | Styling                   |
-| Vercel       | Deployment                |
+<p align="center">
+
+<img src="https://skillicons.dev/icons?i=nextjs,ts,tailwind,supabase,vercel,git,github,vscode" />
+
+</p>
 
 ---
 
-## 📸 Core Modules
+## 📊 Project Stats
 
-### 🎵 Music Player
+<p align="center">
 
-* Stream songs instantly
-* Background playback
-* Audio controls
+<img height="170" src="https://github-readme-stats.vercel.app/api?username=YOUR_USERNAME&show_icons=true&theme=radical"/>
 
-### ❤️ Liked Songs
+<img height="170" src="https://github-readme-streak-stats.herokuapp.com/?user=YOUR_USERNAME&theme=radical"/>
 
-* Save favorite tracks
-* Access anytime
-
-### 📁 Playlists
-
-* Create playlists
-* Organize music collections
-
-### ⏱ Recently Played
-
-* Track listening history
-* Resume favorite songs
-
-### 📥 Downloads
-
-* Manage downloaded songs
-* Offline-ready metadata storage
+</p>
 
 ---
 
-## 🏗 Project Structure
+## 📈 Languages Used
 
-```bash
-HeartTune/
-│
-├── public/
-│   ├── icons/
-│   ├── manifest.json
-│
-├── src/
-│   ├── api/
-│   ├── components/
-│   ├── contexts/
-│   ├── hooks/
-│   ├── lib/
-│   ├── pages/
-│   ├── services/
-│   ├── types/
-│   └── utils/
-│
-├── .env.local
-├── package.json
-├── next.config.js
-└── README.md
-```
+<p align="center">
+
+<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=YOUR_USERNAME&layout=compact&theme=radical"/>
+
+</p>
 
 ---
 
-## ⚙️ Environment Variables
+## 🎵 HeartTune Preview
 
-Create a `.env.local` file:
+<p align="center">
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_ANON_KEY
-NEXT_PUBLIC_SAAVN_API_URL=https://saavn.sumit.co
-```
+<img src="YOUR_APP_SCREENSHOT_URL" width="900"/>
+
+</p>
 
 ---
 
-## 🚀 Getting Started
+## 🏗️ Built With
 
-### Clone Repository
-
-```bash
-git clone https://github.com/yourusername/hearttune.git
-cd hearttune
-```
-
-### Install Dependencies
-
-```bash
-npm install
-```
-
-### Start Development Server
-
-```bash
-npm run dev
-```
-
-### Build Production Version
-
-```bash
-npm run build
-```
-
-### Start Production Server
-
-```bash
-npm start
-```
-
----
-
-## ☁️ Deployment
-
-### Deploy on Vercel
-
-1. Push project to GitHub
-2. Import repository into Vercel
-3. Configure environment variables
-4. Click Deploy
-
-Your app will be live in minutes 🚀
-
----
-
-## 📱 Install HeartTune
-
-### Desktop
-
-1. Open HeartTune in Chrome
-2. Click **Install HeartTune**
-3. Launch from Start Menu
-
-### Mobile
-
-1. Open HeartTune in Chrome
-2. Tap **Add to Home Screen**
-3. Enjoy an app-like experience
-
----
-
-## 🔮 Future Roadmap
-
-* 🤖 AI Music Recommendations
-* 🎤 Lyrics Support
-* 🎧 Podcast Streaming
-* 👥 Collaborative Playlists
-* 🌎 Social Sharing
-* 📈 Listening Analytics
+- ⚛️ Next.js
+- 🔷 TypeScript
+- 🟢 Supabase
+- 🎵 JioSaavn API
+- 🎨 Tailwind CSS
+- ▲ Vercel
 
 ---
 
@@ -227,28 +122,18 @@ Your app will be live in minutes 🚀
 
 ### Santheesh S
 
-**B.Tech Artificial Intelligence & Data Science**
+🎓 B.Tech Artificial Intelligence & Data Science
 
-Sri Shakthi Institute of Engineering and Technology
+🏫 Sri Shakthi Institute of Engineering and Technology
 
----
-
-## ⭐ Support
-
-If you like this project:
-
-🌟 Star the repository
-
-🍴 Fork the project
-
-🚀 Share it with others
+🚀 Full Stack & AI Developer
 
 ---
 
 <div align="center">
 
-### ❤️ Built with passion for music lovers
+### ❤️ Feel the Beat. Love the Music.
 
-**HeartTune — Feel the Beat. Love the Music.**
+<img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=600&size=22&duration=4000&pause=1000&color=FF4D6D&center=true&vCenter=true&width=500&lines=Thank+you+for+visiting+HeartTune!;Give+this+project+a+⭐+if+you+like+it!" />
 
 </div>
