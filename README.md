@@ -117,31 +117,7 @@ HeartTune works like a native application.
 | Tailwind CSS | Styling                   |
 | Vercel       | Deployment                |
 
----
 
-# 📸 Application Preview
-
-<div align="center">
-
-### 🏠 Home Page
-
-<img src="YOUR_SCREENSHOT_1" width="900"/>
-
-<br><br>
-
-### 🎶 Music Player
-
-<img src="YOUR_SCREENSHOT_2" width="900"/>
-
-<br><br>
-
-### ❤️ Personal Library
-
-<img src="YOUR_SCREENSHOT_3" width="900"/>
-
-</div>
-
----
 
 # ⚡ Quick Start
 
@@ -171,21 +147,7 @@ npm run dev
 npm run build
 ```
 
----
 
-# 🔑 Environment Variables
-
-Create `.env.local`
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
-
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_ANON_KEY
-
-NEXT_PUBLIC_SAAVN_API_URL=https://saavn.sumit.co
-```
-
----
 
 # ☁️ Deployment
 
