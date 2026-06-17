@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="150" src="https://cdn-icons-png.flaticon.com/512/3659/3659898.png"/>
+
 
 # 🎵 HeartTune
 
