@@ -11,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 interface InstallButtonProps {
   className?: string
   compact?: boolean
+  showWhenUnavailable?: boolean
 }
 
 function isStandaloneMode() {
@@ -23,7 +24,11 @@ function isStandaloneMode() {
   )
 }
 
-export default function InstallButton({ className = '', compact = false }: InstallButtonProps) {
+export default function InstallButton({
+  className = '',
+  compact = false,
+  showWhenUnavailable = false,
+}: InstallButtonProps) {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(false)
 
@@ -52,7 +57,10 @@ export default function InstallButton({ className = '', compact = false }: Insta
   }, [])
 
   const handleInstall = async () => {
-    if (!installPrompt) return
+    if (!installPrompt) {
+      window.alert('Use your browser install option to install HeartTune as an app.')
+      return
+    }
 
     await installPrompt.prompt()
     const choice = await installPrompt.userChoice
@@ -62,13 +70,14 @@ export default function InstallButton({ className = '', compact = false }: Insta
     setInstallPrompt(null)
   }
 
-  if (installed || !installPrompt) return null
+  if (installed || (!installPrompt && !showWhenUnavailable)) return null
 
   return (
     <button
       type="button"
       className={`install-app-btn ${compact ? 'compact' : ''} ${className}`.trim()}
       onClick={() => void handleInstall()}
+      title={installPrompt ? 'Install HeartTune' : 'Install HeartTune from your browser menu'}
     >
       <Download size={18} />
       <span>Install HeartTune</span>

@@ -1,192 +1,76 @@
-<div align="center">
+# HeartTune
 
+HeartTune is a Spotify-inspired music streaming app built with Next.js, React, TypeScript, Supabase, and the JioSaavn API. It includes authentication, liked songs, playlists, recently played songs, downloads metadata, and installable PWA support.
 
+## Tech Stack
 
-# 🎵 HeartTune
+- Next.js 16
+- React 19
+- TypeScript
+- Supabase Auth and Database
+- JioSaavn API
+- PWA service worker and offline fallback
 
-### ❤️ Feel the Beat. Love the Music.
-
-<img src="https://readme-typing-svg.demolab.com?font=Poppins&weight=700&size=28&duration=2500&pause=1000&color=FF4D6D&center=true&vCenter=true&width=800&lines=Modern+Music+Streaming+Platform;Spotify-Inspired+Experience;Built+with+Next.js+and+Supabase;Progressive+Web+Application;Stream+Music+Anywhere+🎧" />
-
-<br>
-
-<a href="YOUR_VERCEL_URL">
-  <img src="https://img.shields.io/badge/🚀_Live_Demo-HeartTune-ff4d6d?style=for-the-badge">
-</a>
-
-<img src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js">
-<img src="https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript">
-<img src="https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=for-the-badge&logo=supabase">
-<img src="https://img.shields.io/badge/TailwindCSS-Styling-38BDF8?style=for-the-badge&logo=tailwindcss">
-<img src="https://img.shields.io/badge/PWA-Installable-purple?style=for-the-badge">
-
-</div>
-
----
-
-## 🌟 About HeartTune
-
-HeartTune is a modern **Spotify-inspired music streaming application** built using **Next.js, TypeScript, Supabase, PostgreSQL, and the JioSaavn API**.
-
-It provides a beautiful music experience with:
-
-✨ Music Streaming
-
-❤️ Liked Songs
-
-📁 Playlists
-
-📥 Downloads
-
-🕒 Recently Played
-
-🔐 Authentication
-
-📱 Installable PWA
-
----
-
-## 🎯 Key Features
-
-<table>
-<tr>
-<td width="33%">
-
-### 🎵 Stream Music
-
-Search and play millions of songs with a seamless listening experience.
-
-</td>
-
-<td width="33%">
-
-### ❤️ Personal Library
-
-Save liked songs, manage playlists, and organize your music.
-
-</td>
-
-<td width="33%">
-
-### 📱 Install as App
-
-Install directly from Chrome and enjoy a native app experience.
-
-</td>
-</tr>
-</table>
-
----
-
-## 🏗️ Architecture
-
-```text
-User
- │
- ▼
-HeartTune Frontend
- (Next.js + TypeScript)
- │
- ├── Supabase Authentication
- │
- ├── PostgreSQL Database
- │      ├── Profiles
- │      ├── Liked Songs
- │      ├── Downloads
- │      ├── Recently Played
- │      └── Playlists
- │
- └── JioSaavn API
-        ├── Songs
-        ├── Albums
-        ├── Artists
-        └── Streaming URLs
-```
-
----
-
-## 🚀 Quick Start
-
-### Clone Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/hearttune.git
-cd hearttune
-```
-
-### Install Dependencies
+## Local Development
 
 ```bash
 npm install
-```
-
-### Run Development Server
-
-```bash
+cp .env.example .env.local
 npm run dev
 ```
 
-### Build Production
+Open `http://localhost:5175`.
+
+## Required Environment Variables
+
+Add these values in `.env.local` for local development and in your hosting provider for production:
 
 ```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+NEXT_PUBLIC_SAAVN_API_URL=https://saavn.sumit.co
+NEXT_PUBLIC_API_BASE_URL=/api
+```
+
+`NEXT_PUBLIC_API_BASE_URL=/api` uses the Next.js rewrite in `next.config.mjs` to proxy API requests to `NEXT_PUBLIC_SAAVN_API_URL`.
+
+## Supabase Setup
+
+Run the SQL in `supabase/schema.sql` in your Supabase SQL editor before using production auth and library features.
+
+In Supabase Auth settings, add your deployed domain to the allowed redirect URLs, for example:
+
+```text
+https://your-domain.vercel.app
+https://your-domain.vercel.app/**
+```
+
+## Deploy To Vercel
+
+1. Push the repository to GitHub.
+2. Import the project in Vercel.
+3. Set the environment variables listed above.
+4. Use the default Next.js framework settings.
+5. Deploy.
+
+The included `vercel.json` pins the build to:
+
+```bash
+npm ci
 npm run build
 ```
 
----
+## Production Checks
 
+```bash
+npm run build
+npm run start
+```
 
+The app registers the service worker only in production. After deploying, verify:
 
-## 📱 Progressive Web App
-
-HeartTune can be installed like a native application.
-
-### Desktop
-
-✅ Open in Chrome
-
-✅ Click Install
-
-✅ Launch from Start Menu
-
-### Mobile
-
-✅ Add to Home Screen
-
-✅ Open Like a Native App
-
----
-
-## 🛣️ Future Roadmap
-
-- 🤖 AI Music Recommendations
-- 🎤 Lyrics Support
-- 🎧 Podcast Streaming
-- 👥 Collaborative Playlists
-- 🌍 Social Sharing
-- 📊 Listening Analytics
-
----
-
-## 👨‍💻 Developer
-
-<div align="center">
-
-# Santheesh S
-
-🎓 Artificial Intelligence & Data Science
-
-🏫 Sri Shakthi Institute of Engineering and Technology
-
-🚀 Full Stack Developer | AI Enthusiast
-
-</div>
-
----
-
-<div align="center">
-
-## ⭐ Star this repository if you like HeartTune
-
-<img src="https://readme-typing-svg.demolab.com?font=Poppins&size=22&duration=3000&pause=1000&color=FF4D6D&center=true&vCenter=true&width=600&lines=Thank+you+for+visiting+HeartTune!;Made+with+❤️+by+Tharun+S;Feel+the+Beat.+Love+the+Music." />
-
-</div>
+- The app loads at the deployed URL.
+- Search and playback can reach `/api`.
+- Sign up/sign in works with your Supabase project.
+- The PWA install prompt appears in supported browsers.
+- `/offline.html`, `/manifest.json`, and `/service-worker.js` return successfully.

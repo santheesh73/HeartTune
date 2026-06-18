@@ -13,6 +13,8 @@ import Library from './views/Library'
 import LikedSongs from './views/LikedSongs'
 import Downloads from './views/Downloads'
 import AlbumPage from './views/Album'
+import TopPicks from './views/TopPicks'
+import Profile from './views/Profile'
 import { useAuth } from './hooks/useAuth'
 
 function ProtectedPage({ children }: { children: React.ReactNode }) {
@@ -51,6 +53,7 @@ function AppRoutes() {
         }
       >
         <Route path="/" element={<Home />} />
+        <Route path="/top-picks" element={<TopPicks />} />
         <Route path="/search" element={<Search />} />
         <Route
           path="/library"
@@ -70,6 +73,7 @@ function AppRoutes() {
             <Downloads />
           }
         />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/playlists" element={<Navigate to="/library" replace />} />
         <Route path="/playlists/:id" element={<Navigate to="/library" replace />} />
         <Route path="/album/:id" element={<AlbumPage />} />

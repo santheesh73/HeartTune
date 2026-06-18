@@ -10,9 +10,10 @@ import {
   Repeat,
   Heart,
   Maximize2,
-  ChevronDown,
+  Minimize2,
   MoreVertical,
   ListMusic,
+  X,
 } from 'lucide-react'
 import { getBestImage, getArtistNames, getSongDuration } from '../api/saavn'
 import { formatDuration } from '../utils/format'
@@ -20,6 +21,7 @@ import { extractSongTheme, type SongTheme } from '../utils/theme'
 import { usePlayer } from '../context/PlayerContext'
 import { useLibrary } from '../context/LibraryContext'
 import { useEffect, useState, type CSSProperties } from 'react'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const DEFAULT_THEME: SongTheme = {
   accent: 'rgb(225, 29, 72)',
@@ -30,6 +32,7 @@ const DEFAULT_THEME: SongTheme = {
 }
 
 export default function PlayerBar() {
+  const isMobile = useIsMobile()
   const {
     currentSong,
     queue,
@@ -41,6 +44,7 @@ export default function PlayerBar() {
     shuffle,
     repeat,
     playQueueAt,
+    removeFromQueue,
     togglePlay,
     playNext,
     playPrev,
@@ -97,15 +101,6 @@ export default function PlayerBar() {
     }
   }, [currentSong, fullscreenImage, image])
 
-  useEffect(() => {
-    if (!currentSong || typeof window === 'undefined') return
-
-    // Open the fullscreen player directly on mobile so users skip the compact player view.
-    if (window.innerWidth <= 900) {
-      setExpanded(true)
-    }
-  }, [currentSong])
-
   if (!currentSong) return null
   const liked = isLiked(currentSong.id)
   const totalDuration = getSongDuration(currentSong, duration)
@@ -140,95 +135,173 @@ export default function PlayerBar() {
           animate={{ y: 0 }}
           exit={{ y: 100 }}
         >
-          <div className="player-track">
-            <img src={image} alt="" className="player-thumb" />
-            <div className="player-track-info">
-              <p className="player-title">{currentSong.name}</p>
-              <p className="player-artist">{getArtistNames(currentSong)}</p>
-            </div>
-            <button
-              className={`icon-btn ${liked ? 'liked' : ''}`}
-              onClick={() => void toggleLike(currentSong)}
-            >
-              <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
-            </button>
-          </div>
-
-          <div className="player-controls">
-            <div className="player-buttons">
-              <button
-                className={`icon-btn ${shuffle ? 'active' : ''}`}
-                onClick={toggleShuffle}
-              >
-                <Shuffle size={18} />
-              </button>
-              <button className="icon-btn" onClick={playPrev}>
-                <SkipBack size={20} fill="currentColor" />
-              </button>
-              <motion.button
-                className="play-btn-main"
-                onClick={togglePlay}
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {isPlaying ? (
-                  <Pause size={24} fill="currentColor" />
-                ) : (
-                  <Play size={24} fill="currentColor" />
-                )}
-              </motion.button>
-              <button className="icon-btn" onClick={playNext}>
-                <SkipForward size={20} fill="currentColor" />
-              </button>
-                <button
-                  className={`icon-btn ${repeat !== 'off' ? 'active' : ''}`}
-                  onClick={toggleRepeat}
-                >
-                  <Repeat size={18} />
-                </button>
-            </div>
-
-            <div className="progress-bar-wrap">
-              <span className="time">{formatDuration(progress)}</span>
+          {isMobile ? (
+            <div className="mobile-mini-player">
               <div
-                className="progress-bar"
+                className="mobile-mini-player-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => setExpanded(true)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    setExpanded(true)
+                  }
+                }}
+              >
+                <img src={image} alt="" className="player-thumb mobile-mini-thumb" />
+                <div className="player-track-info mobile-mini-info">
+                  <p className="player-title">{currentSong.name}</p>
+                  <p className="player-artist">{getArtistNames(currentSong)}</p>
+                </div>
+                <div className="mobile-mini-actions">
+                  <button
+                    className={`icon-btn mobile-mini-like ${liked ? 'liked' : ''}`}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void toggleLike(currentSong)
+                    }}
+                    aria-label={liked ? 'Remove from liked songs' : 'Like song'}
+                  >
+                    <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
+                  </button>
+                  <motion.button
+                    className="play-btn-main mobile-mini-play"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      togglePlay()
+                    }}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.95 }}
+                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                  >
+                    {isPlaying ? (
+                      <Pause size={24} fill="currentColor" />
+                    ) : (
+                      <Play size={24} fill="currentColor" />
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+
+              <div
+                className="progress-bar mobile-mini-progress"
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect()
                   const pct = (e.clientX - rect.left) / rect.width
                   seek(pct * totalDuration)
                 }}
               >
-                <div className="progress-fill" style={{ width: `${progressPct}%` }}>
-                  <div className="progress-thumb" />
+                <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="player-track">
+                <img src={image} alt="" className="player-thumb" />
+                <div
+                  className="player-track-info"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setExpanded(true)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      setExpanded(true)
+                    }
+                  }}
+                >
+                  <p className="player-title">{currentSong.name}</p>
+                  <p className="player-artist">{getArtistNames(currentSong)}</p>
+                </div>
+                <button className="icon-btn mobile-expand-btn" onClick={() => setExpanded(true)} title="Expand player">
+                  <Maximize2 size={18} />
+                </button>
+                <button
+                  className={`icon-btn ${liked ? 'liked' : ''}`}
+                  onClick={() => void toggleLike(currentSong)}
+                >
+                  <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
+                </button>
+              </div>
+
+              <div className="player-controls">
+                <div className="player-buttons">
+                  <button
+                    className={`icon-btn ${shuffle ? 'active' : ''}`}
+                    onClick={toggleShuffle}
+                  >
+                    <Shuffle size={18} />
+                  </button>
+                  <button className="icon-btn" onClick={playPrev}>
+                    <SkipBack size={20} fill="currentColor" />
+                  </button>
+                  <motion.button
+                    className="play-btn-main"
+                    onClick={togglePlay}
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {isPlaying ? (
+                      <Pause size={24} fill="currentColor" />
+                    ) : (
+                      <Play size={24} fill="currentColor" />
+                    )}
+                  </motion.button>
+                  <button className="icon-btn" onClick={playNext}>
+                    <SkipForward size={20} fill="currentColor" />
+                  </button>
+                    <button
+                      className={`icon-btn ${repeat !== 'off' ? 'active' : ''}`}
+                      onClick={toggleRepeat}
+                    >
+                      <Repeat size={18} />
+                    </button>
+                </div>
+
+                <div className="progress-bar-wrap">
+                  <span className="time">{formatDuration(progress)}</span>
+                  <div
+                    className="progress-bar"
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      const pct = (e.clientX - rect.left) / rect.width
+                      seek(pct * totalDuration)
+                    }}
+                  >
+                    <div className="progress-fill" style={{ width: `${progressPct}%` }}>
+                      <div className="progress-thumb" />
+                    </div>
+                  </div>
+                  <span className="time">{formatDuration(totalDuration)}</span>
                 </div>
               </div>
-              <span className="time">{formatDuration(totalDuration)}</span>
-            </div>
-          </div>
 
-          <div className="player-extra">
-            <button className="icon-btn" onClick={() => setExpanded(true)}>
-              <Maximize2 size={18} />
-            </button>
-            <button className={`icon-btn ${showQueue ? 'active' : ''}`} onClick={() => setShowQueue((value) => !value)}>
-              <ListMusic size={18} />
-            </button>
-            <button className="icon-btn" onClick={toggleMute}>
-              {muted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={muted ? 0 : volume}
-              onChange={(e) => {
-                setVolume(parseFloat(e.target.value))
-                setMuted(false)
-              }}
-              className="volume-slider"
-            />
-          </div>
+              <div className="player-extra">
+                <button className="icon-btn" onClick={() => setExpanded(true)}>
+                  <Maximize2 size={18} />
+                </button>
+                <button className={`icon-btn ${showQueue ? 'active' : ''}`} onClick={() => setShowQueue((value) => !value)}>
+                  <ListMusic size={18} />
+                </button>
+                <button className="icon-btn" onClick={toggleMute}>
+                  {muted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={muted ? 0 : volume}
+                  onChange={(e) => {
+                    setVolume(parseFloat(e.target.value))
+                    setMuted(false)
+                  }}
+                  className="volume-slider"
+                />
+              </div>
+            </>
+          )}
 
           {showQueue ? (
             <div className="player-queue-panel">
@@ -238,19 +311,38 @@ export default function PlayerBar() {
               </div>
               {upcomingQueue.length ? (
                 <div className="player-queue-list">
-                  {upcomingQueue.slice(0, 6).map((song, index) => (
-                    <button
+                  {upcomingQueue.map((song, index) => (
+                    <div
                       key={`${song.id}-${queueIndex + index + 1}`}
-                      type="button"
                       className="player-queue-item"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => playQueueAt(queueIndex + index + 1)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          playQueueAt(queueIndex + index + 1)
+                        }
+                      }}
                     >
                       <img src={getBestImage(song.image, '150x150')} alt="" className="player-queue-thumb" />
                       <span className="player-queue-meta">
                         <strong>{song.name}</strong>
                         <small>{getArtistNames(song)}</small>
                       </span>
-                    </button>
+                      <button
+                        type="button"
+                        className="player-queue-remove"
+                        title="Remove from queue"
+                        aria-label={`Remove ${song.name} from queue`}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          removeFromQueue(queueIndex + index + 1)
+                        }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -277,16 +369,25 @@ export default function PlayerBar() {
 
               <div className="player-fullscreen-content-wrapper min-h-screen h-screen w-full flex flex-col justify-between">
                 <div className="player-fullscreen-topbar">
-                  <button className="icon-btn" onClick={() => setExpanded(false)}>
-                    <ChevronDown size={28} color="white" />
+                  <button
+                    className="icon-btn fullscreen-minimize-btn"
+                    onClick={() => setExpanded(false)}
+                    title="Minimize player"
+                    aria-label="Minimize player"
+                  >
+                    <Minimize2 size={24} color="white" />
                   </button>
                   <div className="player-fullscreen-header-text">
                     <p className="kicker">Playing From:</p>
                     <p className="context">HeartTune</p>
                   </div>
-                  <button className="icon-btn">
-                    <MoreVertical size={24} color="white" />
-                  </button>
+                  {isMobile ? (
+                    <button className="icon-btn">
+                      <MoreVertical size={24} color="white" />
+                    </button>
+                  ) : (
+                    <span className="player-fullscreen-header-spacer" aria-hidden="true" />
+                  )}
                 </div>
 
                 <div className="player-fullscreen-main h-screen w-full flex flex-col flex-1">
@@ -319,19 +420,23 @@ export default function PlayerBar() {
                     </div>
 
                     <div className="player-fullscreen-progress">
-                      <div
-                        className="progress-bar player-fullscreen-progress-bar"
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect()
-                          const pct = (e.clientX - rect.left) / rect.width
-                          seek(pct * totalDuration)
-                        }}
-                      >
-                        <div className="progress-fill" style={{ width: `${progressPct}%` }}>
-                          <div className="progress-thumb" />
+                      <div className="player-fullscreen-progress-row">
+                        <span className="time">{formatDuration(progress)}</span>
+                        <div
+                          className="progress-bar player-fullscreen-progress-bar"
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            const pct = (e.clientX - rect.left) / rect.width
+                            seek(pct * totalDuration)
+                          }}
+                        >
+                          <div className="progress-fill" style={{ width: `${progressPct}%` }}>
+                            <div className="progress-thumb" />
+                          </div>
                         </div>
+                        <span className="time">{formatDuration(totalDuration)}</span>
                       </div>
-                      <div className="player-fullscreen-times">
+                      <div className="player-fullscreen-times" aria-hidden="true">
                         <span className="time">{formatDuration(progress)}</span>
                         <span className="time">{formatDuration(totalDuration)}</span>
                       </div>
@@ -371,19 +476,38 @@ export default function PlayerBar() {
                       </div>
                       {upcomingQueue.length ? (
                         <div className="player-queue-list fullscreen">
-                          {upcomingQueue.slice(0, 5).map((song, index) => (
-                            <button
+                          {upcomingQueue.map((song, index) => (
+                            <div
                               key={`${song.id}-${queueIndex + index + 1}-fullscreen`}
-                              type="button"
                               className="player-queue-item"
+                              role="button"
+                              tabIndex={0}
                               onClick={() => playQueueAt(queueIndex + index + 1)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  event.preventDefault()
+                                  playQueueAt(queueIndex + index + 1)
+                                }
+                              }}
                             >
                               <img src={getBestImage(song.image, '150x150')} alt="" className="player-queue-thumb" />
                               <span className="player-queue-meta">
                                 <strong>{song.name}</strong>
                                 <small>{getArtistNames(song)}</small>
                               </span>
-                            </button>
+                              <button
+                                type="button"
+                                className="player-queue-remove"
+                                title="Remove from queue"
+                                aria-label={`Remove ${song.name} from queue`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  removeFromQueue(queueIndex + index + 1)
+                                }}
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
                           ))}
                         </div>
                       ) : (

@@ -88,6 +88,10 @@ export default function Downloads() {
               song={entry.song}
               index={i}
               queue={songs}
+              showMobileRemove
+              compactDesktopActions
+              showCompactQueue
+              removeTitle="Remove download"
               onRemove={() => handleRemove(entry.id)}
             />
           ))}

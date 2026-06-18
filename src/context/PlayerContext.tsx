@@ -8,9 +8,18 @@ import {
   type ReactNode,
 } from 'react'
 import type { Song } from '../types'
-import { getPlayableAudioUrl, getSongDuration } from '../api/saavn'
+import {
+  filterFullSongs,
+  getHomeQuery,
+  getPlayableAudioUrl,
+  getSongDuration,
+  preferLanguageSongs,
+  searchSongs,
+} from '../api/saavn'
 import { useAuth } from '../hooks/useAuth'
+import { useLanguage } from './LanguageContext'
 import { addRecentlyPlayed } from '../services/recentlyPlayedService'
+import { isOfflineError } from '../services/serviceUtils'
 import { getDownload } from '../utils/downloads'
 
 interface PlayerContextType {
@@ -26,6 +35,7 @@ interface PlayerContextType {
   playSong: (song: Song, queue?: Song[]) => void
   addToQueue: (song: Song) => boolean
   playQueueAt: (index: number) => void
+  removeFromQueue: (index: number) => void
   togglePlay: () => void
   playNext: () => void
   playPrev: () => void
@@ -39,6 +49,7 @@ const PlayerContext = createContext<PlayerContextType | null>(null)
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const { language } = useLanguage()
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [currentSong, setCurrentSong] = useState<Song | null>(null)
   const [queue, setQueue] = useState<Song[]>([])
@@ -55,8 +66,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const queueIndexRef = useRef(queueIndex)
   const shuffleRef = useRef(shuffle)
   const repeatRef = useRef(repeat)
+  const languageRef = useRef(language)
   const currentSongRef = useRef<Song | null>(null)
-  const playNextRef = useRef<() => void>(() => {})
+  const playNextRef = useRef<() => void | Promise<void>>(() => {})
+  const autoRecommendationLoadingRef = useRef(false)
 
   const updateDuration = useCallback((audio: HTMLAudioElement, song: Song | null) => {
     setDuration(getSongDuration(song, audio.duration))
@@ -100,27 +113,64 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       updateDuration(audio, resolvedSong)
 
       if (user) {
-        void addRecentlyPlayed(user.id, resolvedSong)
+        void addRecentlyPlayed(user.id, resolvedSong).catch((error) => {
+          if (!isOfflineError(error)) {
+            console.error('Unable to store recently played song:', error)
+          }
+        })
       }
     } catch {
       setIsPlaying(false)
     }
   }, [updateDuration, user])
 
-  const playNextInternal = useCallback(() => {
+  const playLanguageRecommendation = useCallback(async () => {
+    if (autoRecommendationLoadingRef.current) return
+
+    autoRecommendationLoadingRef.current = true
+
+    try {
+      const activeSong = currentSongRef.current
+      const activeQueue = queueRef.current
+      const activeLanguage = languageRef.current
+      const excludedIds = new Set(activeQueue.map((song) => song.id))
+      if (activeSong) excludedIds.add(activeSong.id)
+
+      const { results } = await searchSongs(getHomeQuery(activeLanguage), 1, 30)
+      const recommendations = preferLanguageSongs(filterFullSongs(results), activeLanguage).filter(
+        (song) => !excludedIds.has(song.id)
+      )
+
+      if (!recommendations.length) {
+        setIsPlaying(false)
+        return
+      }
+
+      setQueue(recommendations)
+      setQueueIndex(0)
+      await loadAndPlay(recommendations[0])
+    } catch (error) {
+      console.error('Unable to autoplay a language recommendation:', error)
+      setIsPlaying(false)
+    } finally {
+      autoRecommendationLoadingRef.current = false
+    }
+  }, [loadAndPlay])
+
+  const playNextInternal = useCallback(async () => {
     const q = queueRef.current
     const idx = queueIndexRef.current
     const sh = shuffleRef.current
     const rep = repeatRef.current
 
     if (!q.length) {
-      setIsPlaying(false)
+      await playLanguageRecommendation()
       return
     }
     let nextIdx = idx + 1
     if (sh) {
       if (q.length === 1) {
-        setIsPlaying(false)
+        await playLanguageRecommendation()
         return
       }
 
@@ -130,22 +180,23 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     } else if (nextIdx >= q.length) {
       if (rep === 'all') nextIdx = 0
       else {
-        setIsPlaying(false)
+        await playLanguageRecommendation()
         return
       }
     }
     setQueueIndex(nextIdx)
     void loadAndPlay(q[nextIdx])
-  }, [loadAndPlay])
+  }, [loadAndPlay, playLanguageRecommendation])
 
   useEffect(() => {
     queueRef.current = queue
     queueIndexRef.current = queueIndex
     shuffleRef.current = shuffle
     repeatRef.current = repeat
+    languageRef.current = language
     currentSongRef.current = currentSong
     playNextRef.current = playNextInternal
-  }, [currentSong, playNextInternal, queue, queueIndex, repeat, shuffle])
+  }, [currentSong, language, playNextInternal, queue, queueIndex, repeat, shuffle])
 
   useEffect(() => {
     const audio = new Audio()
@@ -156,7 +207,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const onTime = () => setProgress(audio.currentTime)
     const onDuration = () => updateDuration(audio, currentSongRef.current)
     const onEnd = () => {
-      playNextRef.current()
+      void playNextRef.current()
     }
 
     audio.addEventListener('timeupdate', onTime)
@@ -214,6 +265,27 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     setQueueIndex(index)
     void loadAndPlay(activeQueue[index])
+  }
+
+  const removeFromQueue = (index: number) => {
+    const activeQueue = queueRef.current
+    const activeIndex = queueIndexRef.current
+
+    if (index < 0 || index >= activeQueue.length || activeQueue.length <= 1) return
+
+    const nextQueue = activeQueue.filter((_, songIndex) => songIndex !== index)
+    setQueue(nextQueue)
+
+    if (index < activeIndex) {
+      setQueueIndex(activeIndex - 1)
+      return
+    }
+
+    if (index === activeIndex) {
+      const replacementIndex = Math.min(activeIndex, nextQueue.length - 1)
+      setQueueIndex(replacementIndex)
+      void loadAndPlay(nextQueue[replacementIndex])
+    }
   }
 
   const togglePlay = () => {
@@ -280,6 +352,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         playSong,
         addToQueue,
         playQueueAt,
+        removeFromQueue,
         togglePlay,
         playNext,
         playPrev,

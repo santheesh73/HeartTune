@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Music2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 
 function getFriendlyAuthMessage(message: string, mode: 'signin' | 'signup') {

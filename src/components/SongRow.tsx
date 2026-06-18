@@ -12,6 +12,13 @@ interface SongRowProps {
   index: number
   queue?: Song[]
   showActions?: boolean
+  showMobileDownload?: boolean
+  showMobileRemove?: boolean
+  hideDesktopDownload?: boolean
+  hideDesktopRemove?: boolean
+  compactDesktopActions?: boolean
+  showCompactQueue?: boolean
+  removeTitle?: string
   onRemove?: () => void
 }
 
@@ -20,6 +27,13 @@ export default function SongRow({
   index,
   queue,
   showActions = true,
+  showMobileDownload = false,
+  showMobileRemove = false,
+  hideDesktopDownload = false,
+  hideDesktopRemove = false,
+  compactDesktopActions = false,
+  showCompactQueue = false,
+  removeTitle = 'Remove from playlist',
   onRemove,
 }: SongRowProps) {
   const { playSong, addToQueue, currentSong, isPlaying, togglePlay } = usePlayer()
@@ -82,7 +96,7 @@ export default function SongRow({
 
   return (
     <motion.div
-      className={`song-row ${isCurrent ? 'active' : ''} ${swipeEnabled ? 'swipe-enabled' : ''} ${queueMessage ? 'queue-feedback' : ''}`}
+      className={`song-row ${isCurrent ? 'active' : ''} ${swipeEnabled ? 'swipe-enabled' : ''} ${queueMessage ? 'queue-feedback' : ''} ${showMobileDownload ? 'mobile-download-row' : ''} ${showMobileRemove ? 'mobile-remove-row' : ''}`}
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.03 }}
@@ -125,29 +139,88 @@ export default function SongRow({
       <span className="song-row-album">{song.album?.name}</span>
       <span className="song-row-duration">{formatDuration(song.duration)}</span>
 
+      {showMobileDownload ? (
+        downloaded ? (
+          <button
+            className="icon-btn song-row-mobile-download downloaded"
+            onClick={(event) => {
+              event.stopPropagation()
+              void removeDownloaded(song.id)
+            }}
+            title="Remove download"
+            aria-label={`Remove ${song.name} from downloads`}
+          >
+            <Download size={18} />
+          </button>
+        ) : (
+          <button
+            className="icon-btn song-row-mobile-download"
+            onClick={(event) => {
+              event.stopPropagation()
+              void downloadSong(song)
+            }}
+            disabled={downloading}
+            title="Download"
+            aria-label={`Download ${song.name}`}
+          >
+            {downloading ? (
+              <Loader2 size={18} className="spin" />
+            ) : (
+              <Download size={18} />
+            )}
+          </button>
+        )
+      ) : null}
+
+      {showMobileRemove && onRemove ? (
+        <button
+          className="icon-btn song-row-mobile-remove"
+          onClick={(event) => {
+            event.stopPropagation()
+            onRemove()
+          }}
+          title={removeTitle}
+          aria-label={`${removeTitle}: ${song.name}`}
+        >
+          <Trash2 size={18} />
+        </button>
+      ) : null}
+
       {showActions && (
         <div className="song-row-actions">
-          <button
-            className="icon-btn"
-            onClick={handleQueueGesture}
-            title="Add to queue"
-          >
-            <ListPlus size={18} />
-          </button>
+          {!compactDesktopActions || showCompactQueue ? (
+            <button
+              className="icon-btn"
+              onClick={handleQueueGesture}
+              title="Add to queue"
+              aria-label={`Add ${song.name} to queue`}
+            >
+              <ListPlus size={18} />
+            </button>
+          ) : null}
 
-          <button
-            className={`icon-btn ${liked ? 'liked' : ''}`}
-            onClick={() => void toggleLike(song)}
-            title={liked ? 'Remove from liked' : 'Like'}
-          >
-            <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
-          </button>
+          {compactDesktopActions ? null : (
+            <button
+              className={`icon-btn ${liked ? 'liked' : ''}`}
+              onClick={() => void toggleLike(song)}
+              title={liked ? 'Remove from liked' : 'Like'}
+            >
+              <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
+            </button>
+          )}
 
-          {onRemove ? (
-            <button className="icon-btn" onClick={onRemove} title="Remove from playlist">
+          {onRemove && !hideDesktopRemove ? (
+            <button
+              className="icon-btn"
+              onClick={onRemove}
+              title={removeTitle}
+              aria-label={`${removeTitle}: ${song.name}`}
+            >
               <Trash2 size={18} />
             </button>
-          ) : downloaded ? (
+          ) : null}
+
+          {hideDesktopRemove ? null : hideDesktopDownload ? null : downloaded ? (
             <button
               className="icon-btn downloaded"
               onClick={() => removeDownloaded(song.id)}

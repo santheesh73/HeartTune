@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Play, Shuffle } from 'lucide-react'
@@ -36,8 +36,10 @@ export default function AlbumPage() {
 
   if (!album) {
     return (
-      <div className="empty-state">
-        <h2>Album not found</h2>
+      <div className="page">
+        <div className="empty-state">
+          <h2>Album not found</h2>
+        </div>
       </div>
     )
   }
@@ -45,6 +47,7 @@ export default function AlbumPage() {
   const songs = album.songs || []
   const image = getBestImage(album.image, '500x500')
   const artists = album.artists?.primary?.map((a) => a.name).join(', ')
+  const albumMeta = [artists, album.year, `${songs.length} songs`].filter(Boolean).join(' • ')
 
   const shufflePlay = () => {
     if (!songs.length) return
@@ -63,9 +66,7 @@ export default function AlbumPage() {
         <div>
           <p className="playlist-type">Album</p>
           <h1>{album.name}</h1>
-          <p className="playlist-meta">
-            {artists} · {album.year} · {songs.length} songs
-          </p>
+          <p className="playlist-meta">{albumMeta}</p>
         </div>
       </motion.div>
 

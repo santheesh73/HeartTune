@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Menu, X } from 'lucide-react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, Link } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import PlayerBar from './PlayerBar'
 import InstallButton from './InstallButton'
+import MobileInstallPrompt from './MobileInstallPrompt'
+import MobileBottomNav from './MobileBottomNav'
+import { useAuth } from '../hooks/useAuth'
+import { usePlayer } from '../context/PlayerContext'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 export default function Layout() {
+  const isMobile = useIsMobile()
+  const { user } = useAuth()
+  const { currentSong } = usePlayer()
   const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
@@ -34,33 +41,39 @@ export default function Layout() {
   }, [navOpen])
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${isMobile ? 'mobile-shell' : ''} ${currentSong ? 'mobile-player-active' : ''}`}>
       <header className="mobile-topbar">
-        <button
-          type="button"
-          className="mobile-menu-btn"
-          onClick={() => setNavOpen((open) => !open)}
-          aria-label={navOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={navOpen}
-        >
-          {navOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-        <div className="mobile-topbar-brand">
-          <span className="mobile-topbar-kicker">Music streaming</span>
-          <strong>HeartTune</strong>
-        </div>
+        <Link to="/" className="mobile-topbar-brand" aria-label="Go to home page">
+          <img src="/favicon.png" alt="HeartTune logo" className="mobile-brand-icon" />
+          <div className="mobile-topbar-copy">
+            <span className="mobile-topbar-kicker">Music streaming</span>
+            <strong>HeartTune</strong>
+          </div>
+        </Link>
         <div className="mobile-topbar-actions">
-          <InstallButton className="mobile-install-btn" compact />
+          {isMobile ? (
+            <Link to="/profile" className="mobile-profile-link" aria-label="Open profile">
+              <img
+                src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'HeartTune'}`}
+                alt={user?.name || 'Profile'}
+                className="mobile-profile-avatar"
+              />
+            </Link>
+          ) : (
+            <InstallButton className="mobile-install-btn" compact />
+          )}
         </div>
       </header>
 
-      <Sidebar navOpen={navOpen} onNavigate={() => setNavOpen(false)} />
-      {navOpen ? <button className="sidebar-backdrop" onClick={() => setNavOpen(false)} /> : null}
+      {!isMobile ? <Sidebar navOpen={navOpen} onNavigate={() => setNavOpen(false)} /> : null}
+      {!isMobile && navOpen ? <button className="sidebar-backdrop" onClick={() => setNavOpen(false)} /> : null}
 
       <main className="main-content">
         <Outlet />
       </main>
+      <MobileInstallPrompt />
       <PlayerBar />
+      {isMobile ? <MobileBottomNav /> : null}
     </div>
   )
 }

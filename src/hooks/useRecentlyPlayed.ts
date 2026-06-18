@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { addRecentlyPlayed, getRecentlyPlayed } from '../services/recentlyPlayedService'
-import { getErrorMessage } from '../services/serviceUtils'
+import { getErrorMessage, isOffline, isOfflineError } from '../services/serviceUtils'
 import { useAuth } from './useAuth'
 import type { Song } from '../types'
+import { readOfflineCache } from '../utils/offlineCache'
 
 interface RecentSongEntry {
   id: string
@@ -15,10 +16,23 @@ export function useRecentlyPlayed(limit = 8) {
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentSongEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const readCachedRecentlyPlayed = useCallback(
+    () =>
+      readOfflineCache<RecentSongEntry[]>(
+        user ? `hearttune-recently-played:${user.id}` : 'hearttune-recently-played:last',
+        readOfflineCache<RecentSongEntry[]>('hearttune-recently-played:last', [])
+      ).slice(0, limit),
+    [limit, user]
+  )
 
   const refreshRecentlyPlayed = useCallback(async () => {
     if (!user) {
-      setRecentlyPlayed([])
+      if (isOffline()) {
+        setRecentlyPlayed(readCachedRecentlyPlayed())
+      } else {
+        setRecentlyPlayed([])
+      }
+      setError(null)
       return
     }
 
@@ -28,11 +42,16 @@ export function useRecentlyPlayed(limit = 8) {
     try {
       setRecentlyPlayed(await getRecentlyPlayed(user.id, limit))
     } catch (nextError) {
-      setError(getErrorMessage(nextError, 'Unable to load recently played songs'))
+      if (isOfflineError(nextError)) {
+        setRecentlyPlayed(readCachedRecentlyPlayed())
+        setError(null)
+      } else {
+        setError(getErrorMessage(nextError, 'Unable to load recently played songs'))
+      }
     } finally {
       setLoading(false)
     }
-  }, [limit, user])
+  }, [limit, readCachedRecentlyPlayed, user])
 
   useEffect(() => {
     void refreshRecentlyPlayed()
@@ -45,9 +64,14 @@ export function useRecentlyPlayed(limit = 8) {
       await addRecentlyPlayed(user.id, song)
       await refreshRecentlyPlayed()
     } catch (nextError) {
-      setError(getErrorMessage(nextError, 'Unable to update recently played songs'))
+      if (isOfflineError(nextError)) {
+        setRecentlyPlayed(readCachedRecentlyPlayed())
+        setError(null)
+      } else {
+        setError(getErrorMessage(nextError, 'Unable to update recently played songs'))
+      }
     }
-  }, [refreshRecentlyPlayed, user])
+  }, [readCachedRecentlyPlayed, refreshRecentlyPlayed, user])
 
   return {
     recentlyPlayed,

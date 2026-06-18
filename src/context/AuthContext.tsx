@@ -30,6 +30,7 @@ interface AuthContextType {
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
   updateAvatar: (avatarUrl: string) => Promise<AuthResult>
+  updateProfileDetails: (updates: { name: string; avatarUrl?: string }) => Promise<AuthResult>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -311,6 +312,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [authAvailable, session, user])
 
+  const updateProfileDetails = useCallback(async ({ name, avatarUrl }: { name: string; avatarUrl?: string }) => {
+    if (!session?.user) {
+      return { error: 'Please sign in to update your profile.' }
+    }
+
+    if (!authAvailable) {
+      return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+    }
+
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      return { error: 'Please enter your name.' }
+    }
+
+    setError(null)
+
+    try {
+      const emailPrefix = session.user.email?.split('@')[0] || trimmedName
+      const existingProfile = await getProfile(session.user.id)
+      const shouldRefreshGeneratedAvatar =
+        existingProfile?.avatar_url?.includes('api.dicebear.com') ||
+        (!existingProfile?.avatar_url && !avatarUrl)
+      const nextAvatar =
+        avatarUrl?.trim() ||
+        (shouldRefreshGeneratedAvatar ? buildAvatar(trimmedName) : existingProfile?.avatar_url || buildAvatar(trimmedName))
+
+      const profile = existingProfile
+        ? await updateProfile(session.user.id, {
+            full_name: trimmedName,
+            username: emailPrefix,
+            avatar_url: nextAvatar,
+          })
+        : await createUserProfile(session.user.id, {
+            full_name: trimmedName,
+            username: emailPrefix,
+            avatar_url: nextAvatar,
+          })
+
+      setUser(mapUser(session, profile.full_name, profile.avatar_url))
+      return { error: null }
+    } catch (nextError) {
+      if (isSupabaseNetworkError(nextError)) {
+        setAuthAvailable(false)
+        setError(SUPABASE_UNAVAILABLE_MESSAGE)
+        return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+      }
+
+      const message = getErrorMessage(nextError, 'Unable to update profile')
+      setError(message)
+      return { error: message }
+    }
+  }, [authAvailable, session])
+
   const value = useMemo(
     () => ({
       user,
@@ -323,8 +377,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refreshUser,
       updateAvatar,
+      updateProfileDetails,
     }),
-    [authAvailable, error, loading, logout, refreshUser, session?.user, signUp, login, updateAvatar, user]
+    [authAvailable, error, loading, logout, refreshUser, session?.user, signUp, login, updateAvatar, updateProfileDetails, user]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

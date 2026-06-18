@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'hearttune-static-v1'
+const STATIC_CACHE = 'hearttune-static-v2'
 const PAGE_CACHE = 'hearttune-pages-v1'
 const OFFLINE_URL = '/offline.html'
 const PRECACHE_URLS = [

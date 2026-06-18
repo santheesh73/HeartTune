@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search as SearchIcon, Music, Disc, Globe2 } from 'lucide-react'
+import { Search as SearchIcon, Music, Disc, Globe2, X } from 'lucide-react'
 import {
   ensureMinimumSongs,
   searchSongs,
@@ -22,12 +22,81 @@ import { usePlayer } from '../context/PlayerContext'
 type Tab = 'songs' | 'albums'
 const RECENT_SEARCHES_KEY = 'hearttune_recent_searches'
 
+interface RecentSearchItem {
+  id: string
+  kind: 'song' | 'album' | 'query'
+  title: string
+  subtitle: string
+  imageUrl: string
+  query: string
+  song?: Song
+}
+
 function decodeHtmlEntities(value: string) {
   if (typeof window === 'undefined') return value
 
   const textarea = document.createElement('textarea')
   textarea.innerHTML = value
-  return textarea.value
+  return textarea.value.replace(/•|·|â€¢|Â·/g, '\u2022')
+}
+
+function buildSongRecentItem(song: Song, query?: string): RecentSearchItem {
+  return {
+    id: `song-${song.id}`,
+    kind: 'song',
+    title: decodeHtmlEntities(song.name),
+    subtitle: `Song • ${getArtistNames(song)}`,
+    imageUrl: getBestImage(song.image, '150x150'),
+    query: decodeHtmlEntities(query || song.name),
+    song,
+  }
+}
+
+function buildAlbumRecentItem(album: Album, query?: string): RecentSearchItem {
+  const artists = album.artists?.primary?.map((artist) => artist.name).join(', ')
+  return {
+    id: `album-${album.id}`,
+    kind: 'album',
+    title: decodeHtmlEntities(album.name),
+    subtitle: artists ? `Album • ${artists}` : 'Album',
+    imageUrl: getBestImage(album.image, '150x150'),
+    query: decodeHtmlEntities(query || album.name),
+  }
+}
+
+function normalizeRecentSearches(value: unknown): RecentSearchItem[] {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((item, index) => {
+      if (typeof item === 'string') {
+        const title = decodeHtmlEntities(item)
+        return {
+          id: `query-${title}-${index}`,
+          kind: 'query' as const,
+          title,
+          subtitle: 'Search',
+          imageUrl: '',
+          query: title,
+        }
+      }
+
+      if (!item || typeof item !== 'object') return null
+
+      const candidate = item as Partial<RecentSearchItem>
+      if (!candidate.title || !candidate.query) return null
+
+      return {
+        id: candidate.id || `query-${candidate.query}-${index}`,
+        kind: candidate.kind === 'song' || candidate.kind === 'album' ? candidate.kind : 'query',
+        title: decodeHtmlEntities(candidate.title),
+        subtitle: candidate.subtitle || 'Search',
+        imageUrl: candidate.imageUrl || '',
+        query: decodeHtmlEntities(candidate.query),
+        song: candidate.song,
+      }
+    })
+    .filter((item): item is RecentSearchItem => Boolean(item))
 }
 
 export default function Search() {
@@ -43,11 +112,11 @@ export default function Search() {
   const [searched, setSearched] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeSuggestion, setActiveSuggestion] = useState(-1)
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+  const [recentSearches, setRecentSearches] = useState<RecentSearchItem[]>(() => {
     if (typeof window === 'undefined') return []
 
     try {
-      return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]')
+      return normalizeRecentSearches(JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]'))
     } catch {
       return []
     }
@@ -57,13 +126,26 @@ export default function Search() {
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const saveRecentSearch = useCallback((value: string) => {
-    const trimmed = decodeHtmlEntities(value).trim()
-    if (!trimmed) return
-
+  const saveRecentSearchItem = useCallback((item: RecentSearchItem) => {
     setRecentSearches((prev) => {
-      const next = [trimmed, ...prev.filter((item) => item.toLowerCase() !== trimmed.toLowerCase())]
+      const next = [
+        item,
+        ...prev.filter(
+          (entry) =>
+            entry.id !== item.id &&
+            entry.query.toLowerCase() !== item.query.toLowerCase() &&
+            entry.title.toLowerCase() !== item.title.toLowerCase()
+        ),
+      ].slice(0, 8)
 
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const removeRecentSearchItem = useCallback((id: string) => {
+    setRecentSearches((prev) => {
+      const next = prev.filter((item) => item.id !== id)
       localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next))
       return next
     })
@@ -77,7 +159,6 @@ export default function Search() {
     setSearched(true)
     setShowSuggestions(false)
     setParams({ q: trimmed })
-    saveRecentSearch(trimmed)
     try {
       const [s, related, a] = await Promise.all([
         searchSongs(trimmed, 1, 40),
@@ -93,13 +174,18 @@ export default function Search() {
       setSongs(finalSongs)
       setAlbums(a.results)
       setQuery(trimmed)
+      if (finalSongs[0]) {
+        saveRecentSearchItem(buildSongRecentItem(finalSongs[0], trimmed))
+      } else if (a.results[0]) {
+        saveRecentSearchItem(buildAlbumRecentItem(a.results[0], trimmed))
+      }
     } catch {
       setSongs([])
       setAlbums([])
     } finally {
       setLoading(false)
     }
-  }, [language, saveRecentSearch, setParams])
+  }, [language, saveRecentSearchItem, setParams])
 
   useEffect(() => {
     if (initialQ) void doSearch(initialQ)
@@ -145,6 +231,7 @@ export default function Search() {
 
   const selectSuggestion = (song: Song) => {
     const decodedName = decodeHtmlEntities(song.name)
+    saveRecentSearchItem(buildSongRecentItem(song, decodedName))
     setQuery(decodedName)
     setShowSuggestions(false)
     void doSearch(decodedName)
@@ -177,6 +264,18 @@ export default function Search() {
   useEffect(() => {
     if (searched && query.trim()) void doSearch(query)
   }, [doSearch, query, searched])
+
+  const handleRecentSearchClick = (item: RecentSearchItem) => {
+    saveRecentSearchItem(item)
+
+    if (item.kind === 'song' && item.song) {
+      setQuery(item.query)
+      playSong(item.song, [item.song])
+      return
+    }
+
+    void doSearch(item.query)
+  }
 
   const tabs: { id: Tab; label: string; icon: typeof Music; count: number }[] = [
     { id: 'songs', label: 'Songs', icon: Music, count: songs.length },
@@ -225,7 +324,9 @@ export default function Search() {
               ))}
             </select>
           </div>
-          <button type="submit">Search</button>
+          <button type="submit" className="search-submit-btn" aria-label="Search">
+            <SearchIcon size={18} />
+          </button>
         </motion.form>
 
         <AnimatePresence>
@@ -293,17 +394,45 @@ export default function Search() {
           </div>
           <div className="recent-search-list">
             {recentSearches.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`recent-search-chip ${
-                  item.toLowerCase() === query.trim().toLowerCase() ? 'active' : ''
+              <div
+                key={item.id}
+                className={`recent-search-item ${
+                  item.query.toLowerCase() === query.trim().toLowerCase() ? 'active' : ''
                 }`}
-                onClick={() => void doSearch(item)}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleRecentSearchClick(item)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    handleRecentSearchClick(item)
+                  }
+                }}
               >
-                <SearchIcon size={16} />
-                <span>{item}</span>
-              </button>
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt="" className="recent-search-thumb" loading="lazy" />
+                ) : (
+                  <span className="recent-search-thumb fallback">
+                    <SearchIcon size={18} />
+                  </span>
+                )}
+                <span className="recent-search-copy">
+                  <strong>{item.title}</strong>
+                  <small>{item.subtitle}</small>
+                </span>
+                <button
+                  type="button"
+                  className="recent-search-remove"
+                  title="Remove from recent searches"
+                  aria-label={`Remove ${item.title} from recent searches`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    removeRecentSearchItem(item.id)
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
             ))}
           </div>
         </section>
@@ -370,3 +499,4 @@ export default function Search() {
     </div>
   )
 }
+

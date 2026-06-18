@@ -5,7 +5,7 @@ import { usePlayer } from '../context/PlayerContext'
 import SongRow from '../components/SongRow'
 
 export default function LikedSongs() {
-  const { likedSongs, likedSongsLoading, likedSongsError } = useLibrary()
+  const { likedSongs, likedSongsLoading, likedSongsError, toggleLike } = useLibrary()
   const { playSong } = usePlayer()
 
   return (
@@ -62,7 +62,18 @@ export default function LikedSongs() {
             <span />
           </div>
           {likedSongs.map((song, i) => (
-            <SongRow key={song.id} song={song} index={i} queue={likedSongs} />
+            <SongRow
+              key={song.id}
+              song={song}
+              index={i}
+              queue={likedSongs}
+              showMobileDownload
+              showMobileRemove
+              compactDesktopActions
+              showCompactQueue
+              removeTitle="Remove from liked songs"
+              onRemove={() => void toggleLike(song)}
+            />
           ))}
         </div>
       ) : null}

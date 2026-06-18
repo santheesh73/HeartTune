@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Song } from '../types'
 import { getLikedSongs, likeSong, unlikeSong } from '../services/likedSongsService'
-import { getErrorMessage } from '../services/serviceUtils'
+import { getErrorMessage, isOffline, isOfflineError } from '../services/serviceUtils'
+import { readOfflineCache, writeOfflineCache } from '../utils/offlineCache'
 import { useAuth } from './useAuth'
+
+const LAST_LIKED_SONGS_CACHE_KEY = 'hearttune-liked-songs:last'
 
 export function useLikedSongs() {
   const { user, isAuthenticated } = useAuth()
@@ -10,9 +13,24 @@ export function useLikedSongs() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const cacheKey = user ? `hearttune-liked-songs:${user.id}` : LAST_LIKED_SONGS_CACHE_KEY
+  const readCachedLikedSongs = useCallback(
+    () => readOfflineCache<Song[]>(cacheKey, readOfflineCache<Song[]>(LAST_LIKED_SONGS_CACHE_KEY, [])),
+    [cacheKey]
+  )
+  const persistLikedSongs = useCallback((songs: Song[]) => {
+    writeOfflineCache(cacheKey, songs)
+    writeOfflineCache(LAST_LIKED_SONGS_CACHE_KEY, songs)
+  }, [cacheKey])
+
   const refreshLikedSongs = useCallback(async () => {
     if (!user) {
-      setLikedSongs([])
+      if (isOffline()) {
+        setLikedSongs(readCachedLikedSongs())
+      } else {
+        setLikedSongs([])
+      }
+      setError(null)
       return
     }
 
@@ -20,13 +38,20 @@ export function useLikedSongs() {
     setError(null)
 
     try {
-      setLikedSongs(await getLikedSongs(user.id))
+      const songs = await getLikedSongs(user.id)
+      setLikedSongs(songs)
+      persistLikedSongs(songs)
     } catch (nextError) {
-      setError(getErrorMessage(nextError, 'Unable to load liked songs'))
+      if (isOfflineError(nextError)) {
+        setLikedSongs(readCachedLikedSongs())
+        setError(null)
+      } else {
+        setError(getErrorMessage(nextError, 'Unable to load liked songs'))
+      }
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [persistLikedSongs, readCachedLikedSongs, user])
 
   useEffect(() => {
     void refreshLikedSongs()
@@ -39,6 +64,12 @@ export function useLikedSongs() {
 
   const like = useCallback(async (song: Song) => {
     if (!user || !isAuthenticated) {
+      if (isOffline()) {
+        const cached = readCachedLikedSongs()
+        setLikedSongs(cached)
+        setError('Liked songs can only be changed while online.')
+        return { success: false, error: 'Liked songs can only be changed while online.' }
+      }
       const message = 'Please sign in to like songs.'
       setError(message)
       return { success: false, error: message }
@@ -46,18 +77,33 @@ export function useLikedSongs() {
 
     try {
       await likeSong(user.id, song)
-      setLikedSongs((prev) => [song, ...prev.filter((item) => item.id !== song.id)])
+      setLikedSongs((prev) => {
+        const next = [song, ...prev.filter((item) => item.id !== song.id)]
+        persistLikedSongs(next)
+        return next
+      })
       setError(null)
       return { success: true, error: null }
     } catch (nextError) {
+      if (isOfflineError(nextError)) {
+        const message = 'Liked songs can only be changed while online.'
+        setError(message)
+        return { success: false, error: message }
+      }
       const message = getErrorMessage(nextError, 'Unable to like song')
       setError(message)
       return { success: false, error: message }
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, persistLikedSongs, readCachedLikedSongs, user])
 
   const unlike = useCallback(async (songId: string) => {
     if (!user || !isAuthenticated) {
+      if (isOffline()) {
+        const cached = readCachedLikedSongs()
+        setLikedSongs(cached)
+        setError('Liked songs can only be changed while online.')
+        return { success: false, error: 'Liked songs can only be changed while online.' }
+      }
       const message = 'Please sign in to manage liked songs.'
       setError(message)
       return { success: false, error: message }
@@ -65,15 +111,24 @@ export function useLikedSongs() {
 
     try {
       await unlikeSong(user.id, songId)
-      setLikedSongs((prev) => prev.filter((item) => item.id !== songId))
+      setLikedSongs((prev) => {
+        const next = prev.filter((item) => item.id !== songId)
+        persistLikedSongs(next)
+        return next
+      })
       setError(null)
       return { success: true, error: null }
     } catch (nextError) {
+      if (isOfflineError(nextError)) {
+        const message = 'Liked songs can only be changed while online.'
+        setError(message)
+        return { success: false, error: message }
+      }
       const message = getErrorMessage(nextError, 'Unable to unlike song')
       setError(message)
       return { success: false, error: message }
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, persistLikedSongs, readCachedLikedSongs, user])
 
   const toggleLikedSong = useCallback(async (song: Song) => {
     if (isSongLiked(song.id)) return unlike(song.id)

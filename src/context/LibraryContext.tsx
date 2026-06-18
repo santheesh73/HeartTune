@@ -13,7 +13,7 @@ import { getPlayableAudioUrl } from '../api/saavn'
 import { useAuth } from '../hooks/useAuth'
 import { useLikedSongs } from '../hooks/useLikedSongs'
 import { getDownloads, removeDownloadMetadata, saveDownloadMetadata } from '../services/downloadService'
-import { getErrorMessage } from '../services/serviceUtils'
+import { getErrorMessage, isOffline, isOfflineError } from '../services/serviceUtils'
 import { getAllDownloads, getDownload, removeDownload, saveDownload } from '../utils/downloads'
 
 interface LibraryContextType {
@@ -57,6 +57,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setDownloadCount(entries.length)
 
     if (!user) {
+      setDownloadMetadataError(null)
+      return
+    }
+
+    if (isOffline()) {
+      setDownloadMetadataError(null)
       return
     }
 
@@ -64,7 +70,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       await getDownloads(user.id)
       setDownloadMetadataError(null)
     } catch (error) {
-      setDownloadMetadataError(getErrorMessage(error, 'Unable to load download metadata'))
+      if (isOfflineError(error)) {
+        setDownloadMetadataError(null)
+      } else {
+        setDownloadMetadataError(getErrorMessage(error, 'Unable to load download metadata'))
+      }
     }
   }, [user])
 
@@ -102,10 +112,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
       if (user) {
         try {
-          await saveDownloadMetadata(user.id, resolved)
-          setDownloadMetadataError(null)
+          if (!isOffline()) {
+            await saveDownloadMetadata(user.id, resolved)
+            setDownloadMetadataError(null)
+          }
         } catch (error) {
-          setDownloadMetadataError(getErrorMessage(error, 'Unable to save download metadata'))
+          if (isOfflineError(error)) {
+            setDownloadMetadataError(null)
+          } else {
+            setDownloadMetadataError(getErrorMessage(error, 'Unable to save download metadata'))
+          }
         }
       }
     } finally {
@@ -135,10 +151,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
     if (user) {
       try {
-        await removeDownloadMetadata(user.id, id)
-        setDownloadMetadataError(null)
+        if (!isOffline()) {
+          await removeDownloadMetadata(user.id, id)
+          setDownloadMetadataError(null)
+        }
       } catch (error) {
-        setDownloadMetadataError(getErrorMessage(error, 'Unable to remove download metadata'))
+        if (isOfflineError(error)) {
+          setDownloadMetadataError(null)
+        } else {
+          setDownloadMetadataError(getErrorMessage(error, 'Unable to remove download metadata'))
+        }
       }
     }
 

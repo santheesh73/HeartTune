@@ -3,6 +3,20 @@ export function getErrorMessage(error: unknown, fallback = 'Something went wrong
   return fallback
 }
 
+export function isOffline() {
+  return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
+export function isOfflineError(error: unknown) {
+  const message = getErrorMessage(error).toLowerCase()
+  return (
+    isOffline() ||
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('load failed')
+  )
+}
+
 export function requireSupabase<T>(value: T | null, fallback?: string): T {
   if (value) return value
 

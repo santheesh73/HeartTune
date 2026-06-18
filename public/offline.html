@@ -8,6 +8,9 @@
     <style>
       :root {
         color-scheme: dark;
+        --accent: #e11d48;
+        --accent-soft: rgba(225, 29, 72, 0.16);
+        --border: rgba(255, 255, 255, 0.08);
       }
 
       * {
@@ -19,27 +22,44 @@
         min-height: 100vh;
         display: grid;
         place-items: center;
-        padding: 24px;
-        font-family: system-ui, sans-serif;
+        padding: 24px 18px;
+        font-family: Outfit, system-ui, sans-serif;
         background:
           radial-gradient(circle at top, rgba(225, 29, 72, 0.22), transparent 42%),
+          radial-gradient(circle at bottom right, rgba(225, 29, 72, 0.14), transparent 36%),
           linear-gradient(180deg, #111 0%, #000 100%);
         color: #fff;
       }
 
       main {
         width: min(100%, 480px);
-        padding: 32px;
+        padding: 30px 24px;
         border-radius: 28px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--border);
         background: rgba(18, 18, 18, 0.92);
-        text-align: center;
+        text-align: left;
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 18px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #ffd5de;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
 
       h1 {
         margin: 0 0 12px;
-        font-size: clamp(2rem, 5vw, 2.8rem);
+        font-size: clamp(2rem, 6vw, 2.6rem);
+        line-height: 1.05;
       }
 
       p {
@@ -47,12 +67,107 @@
         color: rgba(255, 255, 255, 0.72);
         line-height: 1.6;
       }
+
+      .support-copy {
+        margin-top: 18px;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .support-copy strong {
+        display: block;
+        margin-bottom: 6px;
+        color: #fff;
+        font-size: 0.95rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        text-decoration: none;
+        color: #fff;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .btn.primary {
+        background: linear-gradient(135deg, #f43f5e, var(--accent));
+        border-color: transparent;
+        box-shadow: 0 10px 28px rgba(225, 29, 72, 0.28);
+      }
+
+      @media (max-width: 480px) {
+        body {
+          padding: 14px;
+          place-items: stretch;
+        }
+
+        main {
+          width: 100%;
+          padding: 22px 16px;
+          border-radius: 20px;
+          align-self: center;
+        }
+
+        .badge {
+          margin-bottom: 16px;
+          padding: 7px 10px;
+          font-size: 0.78rem;
+        }
+
+        h1 {
+          margin-bottom: 10px;
+          font-size: clamp(1.8rem, 5.6vw, 2.3rem);
+        }
+
+        .support-copy {
+          margin-top: 16px;
+          padding: 14px;
+          border-radius: 16px;
+        }
+
+        .actions {
+          gap: 10px;
+          flex-direction: column;
+          margin-top: 20px;
+        }
+
+        .btn {
+          width: 100%;
+          min-height: 42px;
+          padding: 0 16px;
+          font-size: 0.96rem;
+        }
+      }
     </style>
   </head>
   <body>
     <main>
+      <div class="badge">Offline Mode</div>
       <h1>HeartTune</h1>
-      <p>You're offline right now. Cached pages and assets are still available, and the app will reconnect automatically when your network returns.</p>
+      <p>You're offline right now. Cached pages and saved parts of the app are still available, and HeartTune will reconnect automatically when your network returns.</p>
+      <div class="support-copy">
+        <strong>What still works</strong>
+        <p>Previously loaded screens, downloaded songs, and cached assets can still open while you’re offline.</p>
+      </div>
+      <div class="actions">
+        <button class="btn primary" type="button" onclick="window.location.reload()">Try Again</button>
+        <a class="btn" href="/">Go Home</a>
+      </div>
     </main>
   </body>
   </html>

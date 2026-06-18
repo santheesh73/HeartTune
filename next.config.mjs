@@ -2,12 +2,23 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
+const saavnApiOrigin = (process.env.NEXT_PUBLIC_SAAVN_API_URL || 'https://saavn.sumit.co').replace(/\/+$/, '')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  compress: true,
+  poweredByHeader: false,
   typedRoutes: false,
   turbopack: {
     root: projectRoot,
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${saavnApiOrigin}/api/:path*`,
+      },
+    ]
   },
   async headers() {
     return [

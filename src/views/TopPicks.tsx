@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe2, Sparkles, TrendingUp, Play } from 'lucide-react'
+import { Sparkles, TrendingUp, Play } from 'lucide-react'
 import {
   searchSongs,
   searchAlbums,
@@ -13,19 +13,18 @@ import type { Song, Album } from '../types'
 import SongCard from '../components/SongCard'
 import AlbumCard from '../components/AlbumCard'
 import LyricistAlbums from '../components/LyricistAlbums'
-import { useAuth } from '../hooks/useAuth'
 import { usePlayer } from '../context/PlayerContext'
 import { useLanguage } from '../context/LanguageContext'
 import { useRecentlyPlayed } from '../hooks/useRecentlyPlayed'
 import { readOfflineCache, writeOfflineCache } from '../utils/offlineCache'
+import { useAuth } from '../hooks/useAuth'
 import { useIsMobile } from '../hooks/useIsMobile'
 
-export default function Home() {
+export default function TopPicks() {
   const isMobile = useIsMobile()
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { playSong } = usePlayer()
-  const { language, setLanguage, languages } = useLanguage()
+  const { language } = useLanguage()
   const { recentlyPlayed, loading: recentLoading } = useRecentlyPlayed(8)
   const [trending, setTrending] = useState<Song[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
@@ -33,7 +32,7 @@ export default function Home() {
   const [offlineRecommendationsOnly, setOfflineRecommendationsOnly] = useState(false)
 
   useEffect(() => {
-    if (isMobile) {
+    if (!isMobile) {
       setLoading(false)
       return
     }
@@ -70,106 +69,20 @@ export default function Home() {
     void load()
   }, [isMobile, language])
 
-  const hour = new Date().getHours()
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const firstName = user?.name?.split(' ')[0]
-  const greetingLine = firstName ? `${greeting}, ${firstName}` : greeting
-
-  if (isMobile) {
-    return (
-      <div className="page home-page mobile-language-page">
-        <motion.header
-          className="page-header mobile-language-header"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div>
-            <h1>
-              {greetingLine}{' '}
-              <span role="img" aria-label="waving hand">
-                {'\u{1F44B}'}
-              </span>
-            </h1>
-            <p>Discover music that moves your heart</p>
-          </div>
-        </motion.header>
-
-        <div className="mobile-language-list">
-          {languages.map((item, i) => (
-            <motion.button
-              key={item.id}
-              type="button"
-              className={`mobile-language-card ${language === item.id ? 'active' : ''}`}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              onClick={() => {
-                setLanguage(item.id)
-                navigate('/top-picks')
-              }}
-            >
-              <span className="mobile-language-icon">
-                {i === 0 ? <Globe2 size={22} /> : i % 2 === 0 ? <Sparkles size={22} /> : <TrendingUp size={22} />}
-              </span>
-              <span className="mobile-language-copy">
-                <strong>{item.label}</strong>
-                <small>{item.id === 'all' ? 'Browse every language' : `Play ${item.label} favorites`}</small>
-              </span>
-            </motion.button>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  if (!isMobile) return <Navigate to="/" replace />
 
   return (
-    <div className="page home-page">
+    <div className="page top-picks-page">
       <motion.header
-        className="page-header hero-header"
+        className="page-header mobile-feed-header"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
         <div>
-          <h1>
-            {greetingLine}{' '}
-            <span role="img" aria-label="waving hand">
-              {'\u{1F44B}'}
-            </span>
-          </h1>
-          <p>Discover music that moves your heart</p>
+          <p className="mobile-feed-kicker">Selected Language</p>
+          <h1>{language === 'all' ? 'Top Picks' : `${language[0].toUpperCase()}${language.slice(1)} Picks`}</h1>
         </div>
       </motion.header>
-
-      <section className="quick-picks">
-        {languages.map((l, i) => (
-          <motion.div
-            key={l.id}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.05 }}
-            whileHover={{ scale: 1.03 }}
-          >
-            <button
-              type="button"
-              className={`quick-pick lang-pick ${language === l.id ? 'active' : ''}`}
-              onClick={() => setLanguage(l.id)}
-              title={`Show ${l.label} songs`}
-            >
-              <span className="quick-pick-icon">
-                {i === 0 ? (
-                  <Globe2 size={20} />
-                ) : i % 2 === 0 ? (
-                  <Sparkles size={20} />
-                ) : (
-                  <TrendingUp size={20} />
-                )}
-              </span>
-              {l.label}
-            </button>
-          </motion.div>
-        ))}
-      </section>
 
       {loading ? (
         <div className="loading-grid">
