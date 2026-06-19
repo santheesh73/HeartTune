@@ -87,7 +87,10 @@ export interface DownloadMetadata {
   song_id: string
   song_title: string
   artist_name: string
+  album_name: string | null
   image_url: string | null
+  audio_url: string | null
+  duration?: string | null
   downloaded_at: string
 }
 

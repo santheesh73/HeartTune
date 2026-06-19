@@ -14,13 +14,15 @@ import {
   ListMusic,
   X,
 } from 'lucide-react'
-import { getBestImage, getArtistNames, getSongDuration } from '../api/saavn'
+import { getArtistNames, getSongDuration } from '../api/saavn'
 import { formatDuration } from '../utils/format'
 import { extractSongTheme, type SongTheme } from '../utils/theme'
 import { usePlayer } from '../context/PlayerContext'
 import { useLibrary } from '../context/LibraryContext'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { getArtworkUrl } from '../utils/artwork'
+import SongArtwork from './SongArtwork'
 
 const DEFAULT_THEME: SongTheme = {
   accent: 'rgb(225, 29, 72)',
@@ -59,8 +61,8 @@ export default function PlayerBar() {
   const [prevVolume, setPrevVolume] = useState(volume)
   const [theme, setTheme] = useState<SongTheme>(DEFAULT_THEME)
   const [showQueue, setShowQueue] = useState(false)
-  const image = currentSong ? getBestImage(currentSong.image, '150x150') : ''
-  const fullscreenImage = currentSong ? getBestImage(currentSong.image, '500x500') || image : ''
+  const image = currentSong ? getArtworkUrl(currentSong.image, '150x150') : ''
+  const fullscreenImage = currentSong ? getArtworkUrl(currentSong.image, '500x500') : image
   const upcomingQueue = queue.filter((_, index) => index > queueIndex)
 
   useEffect(() => {
@@ -148,7 +150,11 @@ export default function PlayerBar() {
                   }
                 }}
               >
-                <img src={image} alt="" className="player-thumb mobile-mini-thumb" />
+                <SongArtwork
+                  images={currentSong.image}
+                  className="player-thumb mobile-mini-thumb"
+                  size="150x150"
+                />
                 <div className="player-track-info mobile-mini-info">
                   <p className="player-title">{currentSong.name}</p>
                   <p className="player-artist">{getArtistNames(currentSong)}</p>
@@ -197,7 +203,7 @@ export default function PlayerBar() {
           ) : (
             <>
               <div className="player-track">
-                <img src={image} alt="" className="player-thumb" />
+                <SongArtwork images={currentSong.image} className="player-thumb" size="150x150" />
                 <div
                   className="player-track-info"
                   role="button"
@@ -324,7 +330,7 @@ export default function PlayerBar() {
                         }
                       }}
                     >
-                      <img src={getBestImage(song.image, '150x150')} alt="" className="player-queue-thumb" />
+                      <SongArtwork images={song.image} className="player-queue-thumb" size="150x150" />
                       <span className="player-queue-meta">
                         <strong>{song.name}</strong>
                         <small>{getArtistNames(song)}</small>
@@ -362,7 +368,7 @@ export default function PlayerBar() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
               <div className="player-fullscreen-bg">
-                <img src={fullscreenImage} alt="" />
+                <SongArtwork images={currentSong.image} className="player-fullscreen-bg-image" size="500x500" />
                 <div className="player-fullscreen-overlay"></div>
               </div>
 
@@ -392,7 +398,12 @@ export default function PlayerBar() {
                         transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                         whileHover={{ scale: 1.05 }}
                       >
-                        <img src={fullscreenImage} alt="" className="player-fullscreen-artwork" />
+                        <SongArtwork
+                          images={currentSong.image}
+                          className="player-fullscreen-artwork"
+                          size="500x500"
+                          loading="eager"
+                        />
                       </motion.div>
                     </div>
                   </div>
@@ -483,7 +494,7 @@ export default function PlayerBar() {
                                 }
                               }}
                             >
-                              <img src={getBestImage(song.image, '150x150')} alt="" className="player-queue-thumb" />
+                              <SongArtwork images={song.image} className="player-queue-thumb" size="150x150" />
                               <span className="player-queue-meta">
                                 <strong>{song.name}</strong>
                                 <small>{getArtistNames(song)}</small>

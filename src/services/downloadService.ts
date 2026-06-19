@@ -22,7 +22,9 @@ export async function saveDownloadMetadata(userId: string, song: Song) {
     song_id: record.song_id,
     song_title: record.song_title,
     artist_name: record.artist_name,
+    album_name: record.album_name,
     image_url: record.image_url,
+    audio_url: record.audio_url,
     downloaded_at: new Date().toISOString(),
   })
 
@@ -34,7 +36,7 @@ export async function getDownloads(userId: string) {
   const client = requireSupabase(supabase)
   const { data, error } = await client
     .from('downloads')
-    .select('id, user_id, song_id, song_title, artist_name, image_url, downloaded_at')
+    .select('id, user_id, song_id, song_title, artist_name, album_name, image_url, audio_url, downloaded_at')
     .eq('user_id', userId)
     .order('downloaded_at', { ascending: false })
 

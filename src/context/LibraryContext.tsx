@@ -52,22 +52,23 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const blobCache = useRef<Map<string, string>>(new Map())
 
   const refreshDownloads = useCallback(async () => {
-    const entries = await getAllDownloads()
-    setDownloadedIds(new Set(entries.map((entry) => entry.id)))
-    setDownloadCount(entries.length)
-
-    if (!user) {
-      setDownloadMetadataError(null)
-      return
-    }
-
-    if (isOffline()) {
-      setDownloadMetadataError(null)
-      return
-    }
-
     try {
-      await getDownloads(user.id)
+      const entries = await getAllDownloads()
+      setDownloadedIds(new Set(entries.map((entry) => entry.id)))
+      setDownloadCount(entries.length)
+
+      if (!user) {
+        setDownloadMetadataError(null)
+        return
+      }
+
+      if (isOffline()) {
+        setDownloadMetadataError(null)
+        return
+      }
+
+      const metadata = await getDownloads(user.id)
+      setDownloadCount(Math.max(entries.length, metadata.length))
       setDownloadMetadataError(null)
     } catch (error) {
       if (isOfflineError(error)) {

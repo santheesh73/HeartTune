@@ -29,6 +29,10 @@ function getApiBase() {
 }
 
 const BASE = getApiBase()
+const API_CACHE_TTL_MS = 5 * 60 * 1000
+
+const apiResponseCache = new Map<string, { expiresAt: number; data: unknown }>()
+const apiInFlight = new Map<string, Promise<unknown>>()
 
 function decodeHtmlEntities(value: string) {
   return value
@@ -62,6 +66,17 @@ function sanitizeApiValue<T>(value: T): T {
 }
 
 async function fetchApi<T>(path: string): Promise<T> {
+  const cached = apiResponseCache.get(path)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data as T
+  }
+
+  const pending = apiInFlight.get(path)
+  if (pending) {
+    return pending as Promise<T>
+  }
+
+  const request = (async () => {
   try {
     const json = await secureJsonFetch<{ success?: boolean; data?: unknown }>(`${BASE}${path}`, {
       retries: 2,
@@ -69,13 +84,24 @@ async function fetchApi<T>(path: string): Promise<T> {
         Boolean(value && typeof value === 'object' && 'success' in value && 'data' in value),
     })
     if (!json.success) throw new Error('API request failed')
-    return sanitizeApiValue(json.data) as T
+    const data = sanitizeApiValue(json.data) as T
+    apiResponseCache.set(path, {
+      data,
+      expiresAt: Date.now() + API_CACHE_TTL_MS,
+    })
+    return data
   } catch (error) {
     const eventType = path.startsWith('/search') ? 'search_failure' : path.startsWith('/songs') ? 'playback_failure' : 'api_failure'
     await auditLog(eventType, { path })
     await captureAppError(error, { path, eventType })
     throw error
+  } finally {
+    apiInFlight.delete(path)
   }
+  })()
+
+  apiInFlight.set(path, request)
+  return request
 }
 
 function normalizeSearchQuery(query: string) {
@@ -280,6 +306,14 @@ export async function getPlaylist(id: string) {
 export async function getSong(id: string) {
   const data = await fetchApi<Song[]>(`/songs?ids=${id}`)
   return data[0] || null
+}
+
+export async function getSongs(ids: string[]) {
+  const uniqueIds = Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean)))
+  if (!uniqueIds.length) return []
+
+  const data = await fetchApi<Song[]>(`/songs?ids=${uniqueIds.map(encodeURIComponent).join(',')}`)
+  return data || []
 }
 
 /** Fetch full song metadata + stream URLs before playback. */

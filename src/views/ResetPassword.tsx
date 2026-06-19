@@ -107,7 +107,7 @@ export default function ResetPassword() {
     }
   }, [navigate])
 
-  if (saved) return <Navigate to="/login" replace />
+  if (saved) return <Navigate to="/" replace />
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()

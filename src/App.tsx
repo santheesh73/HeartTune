@@ -19,13 +19,14 @@ import ForgotPassword from './views/ForgotPassword'
 import ResetPassword from './views/ResetPassword'
 import VerifyEmail from './views/VerifyEmail'
 import { useAuth } from './hooks/useAuth'
+import AppLogoLoader from './components/AppLogoLoader'
 
 function ProtectedPage({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
-    return <div className="page"><div className="skeleton-hero" /></div>
+    return <AppLogoLoader />
   }
 
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace state={{ from: location.pathname }} />

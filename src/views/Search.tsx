@@ -8,7 +8,6 @@ import {
   searchRelatedSongs,
   searchAlbums,
   getSongSuggestions,
-  getBestImage,
   getArtistNames,
   filterFullSongs,
   preferLanguageSongs,
@@ -18,6 +17,8 @@ import SongRow from '../components/SongRow'
 import AlbumCard from '../components/AlbumCard'
 import { useLanguage, type AppLanguage } from '../context/LanguageContext'
 import { usePlayer } from '../context/PlayerContext'
+import SongArtwork from '../components/SongArtwork'
+import { FALLBACK_ARTWORK_URL, getArtworkUrl } from '../utils/artwork'
 
 type Tab = 'songs' | 'albums'
 const RECENT_SEARCHES_KEY = 'hearttune_recent_searches'
@@ -46,7 +47,7 @@ function buildSongRecentItem(song: Song, query?: string): RecentSearchItem {
     kind: 'song',
     title: decodeHtmlEntities(song.name),
     subtitle: `Song • ${getArtistNames(song)}`,
-    imageUrl: getBestImage(song.image, '150x150'),
+    imageUrl: getArtworkUrl(song.image, '150x150'),
     query: decodeHtmlEntities(query || song.name),
     song,
   }
@@ -59,7 +60,7 @@ function buildAlbumRecentItem(album: Album, query?: string): RecentSearchItem {
     kind: 'album',
     title: decodeHtmlEntities(album.name),
     subtitle: artists ? `Album • ${artists}` : 'Album',
-    imageUrl: getBestImage(album.image, '150x150'),
+    imageUrl: getArtworkUrl(album.image, '150x150'),
     query: decodeHtmlEntities(query || album.name),
   }
 }
@@ -161,15 +162,15 @@ export default function Search() {
     setParams({ q: trimmed })
     try {
       const [s, related, a] = await Promise.all([
-        searchSongs(trimmed, 1, 40),
-        searchRelatedSongs(trimmed, 20),
+        searchSongs(trimmed, 1, 24),
+        searchRelatedSongs(trimmed, 16),
         searchAlbums(trimmed, 1, 12),
       ])
       const primarySongs = filterFullSongs(s.results)
       const relatedSongs = filterFullSongs(related.results)
       const languagePreferred = preferLanguageSongs(primarySongs, language)
       const relatedPreferred = preferLanguageSongs(relatedSongs, language)
-      const finalSongs = ensureMinimumSongs(languagePreferred, relatedPreferred, 20)
+      const finalSongs = ensureMinimumSongs(languagePreferred, relatedPreferred, 16)
 
       setSongs(finalSongs)
       setAlbums(a.results)
@@ -358,11 +359,7 @@ export default function Search() {
                       }
                     }}
                   >
-                    <img
-                      src={getBestImage(song.image, '150x150')}
-                      alt=""
-                      className="suggestion-thumb"
-                    />
+                    <SongArtwork images={song.image} className="suggestion-thumb" size="150x150" />
                     <div className="suggestion-info">
                       <span className="suggestion-title">{song.name}</span>
                       <span className="suggestion-artist">{getArtistNames(song)}</span>
@@ -410,7 +407,15 @@ export default function Search() {
                 }}
               >
                 {item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" className="recent-search-thumb" loading="lazy" />
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="recent-search-thumb"
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.src = FALLBACK_ARTWORK_URL
+                    }}
+                  />
                 ) : (
                   <span className="recent-search-thumb fallback">
                     <SearchIcon size={18} />

@@ -3,9 +3,24 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status })
+}
+
+function getResetOrigin(request: NextRequest) {
+  if (siteUrl) return siteUrl.replace(/\/+$/, '')
+
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const host = forwardedHost || request.headers.get('host')
+
+  if (host) {
+    return `${forwardedProto || request.nextUrl.protocol.replace(':', '')}://${host}`
+  }
+
+  return request.nextUrl.origin
 }
 
 export async function POST(request: NextRequest) {
@@ -20,7 +35,7 @@ export async function POST(request: NextRequest) {
     return jsonError('Enter a valid email address.')
   }
 
-  const origin = request.nextUrl.origin
+  const origin = getResetOrigin(request)
   const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: {
       persistSession: false,

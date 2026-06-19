@@ -1,5 +1,6 @@
-import { getBestAudioUrl, getBestImage, getArtistNames } from '../api/saavn'
+import { getBestAudioUrl, getArtistNames } from '../api/saavn'
 import type { Song } from '../types'
+import { getArtworkUrl } from '../utils/artwork'
 
 interface SongRecordShape {
   song_id: string
@@ -8,7 +9,7 @@ interface SongRecordShape {
   album_name: string | null
   image_url: string | null
   audio_url: string | null
-  duration: string | null
+  duration?: string | null
 }
 
 function parseArtists(artistName: string) {
@@ -27,7 +28,7 @@ export function buildSongRecord(song: Song): SongRecordShape {
     song_title: song.name,
     artist_name: getArtistNames(song),
     album_name: song.album?.name || '',
-    image_url: getBestImage(song.image, '500x500') || getBestImage(song.image, '150x150'),
+    image_url: getArtworkUrl(song.image, '500x500'),
     audio_url: getBestAudioUrl(song),
     duration: String(song.duration || 0),
   }

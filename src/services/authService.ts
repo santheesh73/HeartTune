@@ -97,7 +97,11 @@ export const sendPasswordResetCode = sendPasswordResetEmail
 function getNetworkFallbackMessage(error: unknown) {
   const message = getErrorMessage(error).toLowerCase()
 
-  if (message.includes('failed to fetch') || message.includes('networkerror')) {
+  if (
+    message.includes('failed to fetch') ||
+    message.includes('fetch failed') ||
+    message.includes('networkerror')
+  ) {
     return 'Unable to reach the HeartTune reset API. Sent the reset link directly through Supabase instead.'
   }
 

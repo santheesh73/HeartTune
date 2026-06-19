@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Play, Pause, Heart, Download, Loader2, Trash2, ListPlus } from 'lucide-react'
-import { getBestImage, getArtistNames } from '../api/saavn'
+import { getArtistNames } from '../api/saavn'
 import { formatDuration } from '../utils/format'
 import type { Song } from '../types'
 import { usePlayer } from '../context/PlayerContext'
 import { useLibrary } from '../context/LibraryContext'
+import SongArtwork from './SongArtwork'
 
 interface SongRowProps {
   song: Song
@@ -20,6 +21,7 @@ interface SongRowProps {
   showCompactQueue?: boolean
   removeTitle?: string
   onRemove?: () => void
+  onDownloadComplete?: () => void
 }
 
 export default function SongRow({
@@ -35,6 +37,7 @@ export default function SongRow({
   showCompactQueue = false,
   removeTitle = 'Remove from playlist',
   onRemove,
+  onDownloadComplete,
 }: SongRowProps) {
   const { playSong, addToQueue, currentSong, isPlaying, togglePlay } = usePlayer()
   const { isLiked, toggleLike, isDownloaded, downloadSong, downloadingIds, removeDownloaded } =
@@ -43,7 +46,6 @@ export default function SongRow({
   const [queueMessage, setQueueMessage] = useState('')
   const queueMessageTimerRef = useRef<number | null>(null)
 
-  const image = getBestImage(song.image, '150x150')
   const isCurrent = currentSong?.id === song.id
   const liked = isLiked(song.id)
   const downloaded = isDownloaded(song.id)
@@ -94,6 +96,11 @@ export default function SongRow({
     showQueueMessage(queued ? 'Added to queue' : 'Already in queue')
   }
 
+  const handleDownload = async () => {
+    await downloadSong(song)
+    onDownloadComplete?.()
+  }
+
   return (
     <motion.div
       className={`song-row ${isCurrent ? 'active' : ''} ${swipeEnabled ? 'swipe-enabled' : ''} ${queueMessage ? 'queue-feedback' : ''} ${showMobileDownload ? 'mobile-download-row' : ''} ${showMobileRemove ? 'mobile-remove-row' : ''}`}
@@ -129,7 +136,7 @@ export default function SongRow({
       </span>
 
       <div className="song-row-info" onClick={handlePlay}>
-        <img src={image} alt="" className="song-row-thumb" />
+        <SongArtwork images={song.image} className="song-row-thumb" size="150x150" />
         <div>
           <p className={`song-row-title ${isCurrent ? 'playing' : ''}`}>{song.name}</p>
           <p className="song-row-artist">{getArtistNames(song)}</p>
@@ -157,7 +164,7 @@ export default function SongRow({
             className="icon-btn song-row-mobile-download"
             onClick={(event) => {
               event.stopPropagation()
-              void downloadSong(song)
+              void handleDownload()
             }}
             disabled={downloading}
             title="Download"
@@ -231,7 +238,7 @@ export default function SongRow({
           ) : (
             <button
               className="icon-btn"
-              onClick={() => downloadSong(song)}
+              onClick={() => void handleDownload()}
               disabled={downloading}
               title="Download"
             >

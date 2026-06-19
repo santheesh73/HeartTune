@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion'
 import { ListPlus, Play } from 'lucide-react'
-import { getArtistNames, getBestImage } from '../api/saavn'
+import { getArtistNames } from '../api/saavn'
 import type { Song } from '../types'
 import { usePlayer } from '../context/PlayerContext'
 import { useState } from 'react'
+import SongArtwork from './SongArtwork'
 
 interface SongCardProps {
   song: Song
@@ -14,7 +15,6 @@ interface SongCardProps {
 export default function SongCard({ song, queue, index = 0 }: SongCardProps) {
   const { playSong, addToQueue, currentSong, isPlaying } = usePlayer()
   const [queueMessage, setQueueMessage] = useState('')
-  const image = getBestImage(song.image, '500x500')
   const isCurrent = currentSong?.id === song.id
 
   const handleAddToQueue = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -33,7 +33,12 @@ export default function SongCard({ song, queue, index = 0 }: SongCardProps) {
       onClick={() => playSong(song, queue || [song])}
     >
       <div className="song-card-image-wrap">
-        <img src={image} alt={song.name} className="song-card-image" loading="lazy" />
+        <SongArtwork
+          images={song.image}
+          alt={song.name}
+          className="song-card-image"
+          size="500x500"
+        />
         <motion.button
           className={`queue-overlay ${queueMessage ? 'visible' : ''}`}
           whileHover={{ scale: 1.08 }}

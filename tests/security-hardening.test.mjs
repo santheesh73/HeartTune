@@ -32,12 +32,17 @@ test('enterprise security headers are configured', () => {
     assert.match(securityHeaders, new RegExp(header))
   }
 
-  assert.match(securityHeaders, /script-src 'self' 'unsafe-inline' https:\/\/browser\.sentry-cdn\.com/)
+  assert.match(
+    securityHeaders,
+    /script-src 'self' 'unsafe-inline' 'unsafe-eval'/
+  )
   assert.match(securityHeaders, /worker-src 'self' blob:/)
+  assert.match(securityHeaders, /child-src 'self' blob:/)
   assert.match(securityHeaders, /connect-src 'self'.*https:.*wss:/s)
   assert.match(securityHeaders, /https:\/\/\*\.supabase\.co/)
   assert.match(securityHeaders, /https:\/\/\*\.supabase\.in/)
   assert.match(securityHeaders, /https:\/\/\*\.ingest\.sentry\.io/)
+  assert.match(securityHeaders, /https:\/\/\*\.ingest\.us\.sentry\.io/)
   assert.match(securityHeaders, /media-src 'self' blob: https:/)
   assert.doesNotMatch(nextConfig, /Content-Security-Policy/)
   assert.match(middleware, /monitoring/)
