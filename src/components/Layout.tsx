@@ -3,7 +3,6 @@ import { Outlet, Link } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import PlayerBar from './PlayerBar'
 import InstallButton from './InstallButton'
-import MobileInstallPrompt from './MobileInstallPrompt'
 import MobileBottomNav from './MobileBottomNav'
 import { useAuth } from '../hooks/useAuth'
 import { usePlayer } from '../context/PlayerContext'
@@ -71,7 +70,6 @@ export default function Layout() {
       <main className="main-content">
         <Outlet />
       </main>
-      <MobileInstallPrompt />
       <PlayerBar />
       {isMobile ? <MobileBottomNav /> : null}
     </div>

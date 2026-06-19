@@ -11,7 +11,6 @@ import {
   Heart,
   Maximize2,
   Minimize2,
-  MoreVertical,
   ListMusic,
   X,
 } from 'lucide-react'
@@ -381,13 +380,7 @@ export default function PlayerBar() {
                     <p className="kicker">Playing From:</p>
                     <p className="context">HeartTune</p>
                   </div>
-                  {isMobile ? (
-                    <button className="icon-btn">
-                      <MoreVertical size={24} color="white" />
-                    </button>
-                  ) : (
-                    <span className="player-fullscreen-header-spacer" aria-hidden="true" />
-                  )}
+                  <span className="player-fullscreen-header-spacer" aria-hidden="true" />
                 </div>
 
                 <div className="player-fullscreen-main h-screen w-full flex flex-col flex-1">

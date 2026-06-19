@@ -13,6 +13,7 @@ import type { Song, Album } from '../types'
 import SongCard from '../components/SongCard'
 import AlbumCard from '../components/AlbumCard'
 import LyricistAlbums from '../components/LyricistAlbums'
+import TamilArtistAlbums from '../components/TamilArtistAlbums'
 import { useAuth } from '../hooks/useAuth'
 import { usePlayer } from '../context/PlayerContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -230,6 +231,8 @@ export default function Home() {
               <p className="lyricist-subtitle">Connect once online to refresh your top picks.</p>
             ) : null}
           </section>
+
+          {language === 'tamil' ? <TamilArtistAlbums /> : null}
 
           <section className="section">
             <div className="section-header">

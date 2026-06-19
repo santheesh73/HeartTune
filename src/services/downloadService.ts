@@ -1,6 +1,7 @@
 import type { Song } from '../types'
 import type { DownloadMetadata } from '../types'
 import { supabase } from '../lib/supabase'
+import { auditLog } from '../lib/monitoring'
 import { buildSongRecord } from './songRecord'
 import { assertNoSupabaseError, requireSupabase } from './serviceUtils'
 
@@ -26,6 +27,7 @@ export async function saveDownloadMetadata(userId: string, song: Song) {
   })
 
   assertNoSupabaseError(error, 'Unable to save download metadata')
+  await auditLog('download_activity', { action: 'save', songId: song.id })
 }
 
 export async function getDownloads(userId: string) {
@@ -49,4 +51,5 @@ export async function removeDownloadMetadata(userId: string, songId: string) {
     .eq('song_id', songId)
 
   assertNoSupabaseError(error, 'Unable to remove download metadata')
+  await auditLog('download_activity', { action: 'remove', songId })
 }

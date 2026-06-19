@@ -1,6 +1,7 @@
 import type { Song, UserPlaylist } from '../types'
 import type { PlaylistUpdate } from '../types/database'
 import { supabase } from '../lib/supabase'
+import { auditLog } from '../lib/monitoring'
 import { buildSongRecord, mapRecordToSong } from './songRecord'
 import { assertNoSupabaseError, requireSupabase } from './serviceUtils'
 
@@ -26,6 +27,7 @@ export async function createPlaylist(userId: string, input: PlaylistInput) {
     .single()
 
   assertNoSupabaseError(error, 'Unable to create playlist')
+  await auditLog('playlist_modification', { action: 'create', playlistId: data?.id })
   return { ...(data as UserPlaylist), songCount: 0, songs: [] }
 }
 
@@ -81,6 +83,7 @@ export async function updatePlaylist(playlistId: string, updates: PlaylistInput)
     .single()
 
   assertNoSupabaseError(error, 'Unable to update playlist')
+  await auditLog('playlist_modification', { action: 'update', playlistId })
   return data as UserPlaylist
 }
 
@@ -142,6 +145,7 @@ export async function addSongToPlaylist(playlistId: string, userId: string, song
   })
 
   assertNoSupabaseError(error, 'Unable to add song to playlist')
+  await auditLog('playlist_modification', { action: 'add_song', playlistId, songId: song.id })
   return true
 }
 
@@ -154,6 +158,7 @@ export async function removeSongFromPlaylist(playlistId: string, songId: string)
     .eq('song_id', songId)
 
   assertNoSupabaseError(error, 'Unable to remove song from playlist')
+  await auditLog('playlist_modification', { action: 'remove_song', playlistId, songId })
 }
 
 export async function deletePlaylist(playlistId: string) {
@@ -171,4 +176,5 @@ export async function deletePlaylist(playlistId: string) {
     .eq('id', playlistId)
 
   assertNoSupabaseError(error, 'Unable to delete playlist')
+  await auditLog('playlist_modification', { action: 'delete', playlistId })
 }

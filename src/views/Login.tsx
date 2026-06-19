@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
+import PasswordStrength from '../components/PasswordStrength'
 import { useAuth } from '../hooks/useAuth'
+import { validatePassword } from '../utils/passwordPolicy'
 
 function getFriendlyAuthMessage(message: string, mode: 'signin' | 'signup') {
   const normalized = message.toLowerCase()
@@ -54,8 +56,9 @@ export default function Login() {
         setError('Please enter your name')
         return
       }
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters')
+      const passwordCheck = validatePassword(password)
+      if (!passwordCheck.valid) {
+        setError(passwordCheck.message || 'Please choose a stronger password.')
         return
       }
       const result = await signUp(name.trim(), email.trim(), password)
@@ -146,6 +149,8 @@ export default function Login() {
             </button>
           </div>
 
+          {isRegister && <PasswordStrength password={password} />}
+
           {error && <p className="login-error">{error}</p>}
 
           <motion.button
@@ -165,6 +170,13 @@ export default function Login() {
             {isRegister ? 'Sign In' : 'Sign Up'}
           </button>
         </p>
+        {!isRegister && (
+          <p className="login-switch compact-auth-link">
+            <a href="/forgot-password">Forgot password?</a>
+            <span aria-hidden="true"> · </span>
+            <a href="/verify-email">Verify email</a>
+          </p>
+        )}
       </motion.div>
     </div>
   )

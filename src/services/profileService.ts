@@ -1,6 +1,7 @@
 import type { Profile } from '../types'
 import type { ProfileInsert, ProfileUpdate } from '../types/database'
 import { supabase } from '../lib/supabase'
+import { auditLog } from '../lib/monitoring'
 import { assertNoSupabaseError, requireSupabase } from './serviceUtils'
 
 interface ProfileInput {
@@ -25,6 +26,7 @@ export async function createUserProfile(userId: string, profile: ProfileInput) {
     .single()
 
   assertNoSupabaseError(error, 'Unable to create profile')
+  await auditLog('profile_update', { action: 'create', userId })
   return data as Profile
 }
 
@@ -56,6 +58,7 @@ export async function updateProfile(userId: string, updates: ProfileInput) {
     .single()
 
   assertNoSupabaseError(error, 'Unable to update profile')
+  await auditLog('profile_update', { action: 'update', userId })
   return data as Profile
 }
 

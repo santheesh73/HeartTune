@@ -225,6 +225,36 @@ export interface Database {
         }
         Relationships: []
       }
+      security_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          event_type: string
+          metadata: Json
+          ip_address: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          event_type: string
+          metadata?: Json
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          event_type?: string
+          metadata?: Json
+          ip_address?: string | null
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -242,3 +272,4 @@ export type PlaylistUpdate = Database['public']['Tables']['user_playlists']['Upd
 export type PlaylistSongRow = Database['public']['Tables']['playlist_songs']['Row']
 export type RecentlyPlayedRow = Database['public']['Tables']['recently_played']['Row']
 export type DownloadRow = Database['public']['Tables']['downloads']['Row']
+export type SecurityLogRow = Database['public']['Tables']['security_logs']['Row']

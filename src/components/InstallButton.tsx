@@ -4,14 +4,18 @@ import { useEffect, useState } from 'react'
 import { Download } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+  prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
 }
 
 interface InstallButtonProps {
   className?: string
   compact?: boolean
-  showWhenUnavailable?: boolean
+}
+
+interface UserAgentDataWithBrands {
+  brands?: Array<{ brand: string; version: string }>
+  mobile?: boolean
 }
 
 function isStandaloneMode() {
@@ -24,16 +28,39 @@ function isStandaloneMode() {
   )
 }
 
+function isDesktopChrome() {
+  if (typeof window === 'undefined') return false
+
+  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+  const desktopWidth = window.matchMedia('(min-width: 901px)').matches
+  const userAgent = window.navigator.userAgent
+  const userAgentData = (window.navigator as Navigator & {
+    userAgentData?: UserAgentDataWithBrands
+  }).userAgentData
+
+  if (!finePointer || !desktopWidth || userAgentData?.mobile) return false
+
+  const brandNames = userAgentData?.brands?.map((brand) => brand.brand) || []
+  if (brandNames.length) {
+    return brandNames.some((brand) => brand === 'Google Chrome')
+  }
+
+  return /Chrome\//.test(userAgent) && !/Edg\/|OPR\/|Opera|Brave|CriOS|Android|Mobile/i.test(userAgent)
+}
+
 export default function InstallButton({
   className = '',
   compact = false,
-  showWhenUnavailable = false,
 }: InstallButtonProps) {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(false)
+  const [canShowInstallButton, setCanShowInstallButton] = useState(false)
 
   useEffect(() => {
+    const supported = isDesktopChrome()
+    setCanShowInstallButton(supported)
     setInstalled(isStandaloneMode())
+    if (!supported) return
 
     // Store the install prompt event so we can trigger it from a custom button.
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -57,10 +84,7 @@ export default function InstallButton({
   }, [])
 
   const handleInstall = async () => {
-    if (!installPrompt) {
-      window.alert('Use your browser install option to install HeartTune as an app.')
-      return
-    }
+    if (!installPrompt) return
 
     await installPrompt.prompt()
     const choice = await installPrompt.userChoice
@@ -70,14 +94,15 @@ export default function InstallButton({
     setInstallPrompt(null)
   }
 
-  if (installed || (!installPrompt && !showWhenUnavailable)) return null
+  if (!canShowInstallButton || installed || !installPrompt) return null
 
   return (
     <button
       type="button"
       className={`install-app-btn ${compact ? 'compact' : ''} ${className}`.trim()}
       onClick={() => void handleInstall()}
-      title={installPrompt ? 'Install HeartTune' : 'Install HeartTune from your browser menu'}
+      aria-label="Install HeartTune as a desktop app"
+      title="Install HeartTune"
     >
       <Download size={18} />
       <span>Install HeartTune</span>

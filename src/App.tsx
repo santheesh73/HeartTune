@@ -15,6 +15,9 @@ import Downloads from './views/Downloads'
 import AlbumPage from './views/Album'
 import TopPicks from './views/TopPicks'
 import Profile from './views/Profile'
+import ForgotPassword from './views/ForgotPassword'
+import ResetPassword from './views/ResetPassword'
+import VerifyEmail from './views/VerifyEmail'
 import { useAuth } from './hooks/useAuth'
 
 function ProtectedPage({ children }: { children: React.ReactNode }) {
@@ -34,7 +37,38 @@ function PublicOnlyPage({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <Navigate to="/" replace /> : <>{children}</>
 }
 
+function isPasswordRecoveryUrl() {
+  if (typeof window === 'undefined') return false
+
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const params = new URLSearchParams(window.location.search)
+  const type = hash.get('type') || params.get('type')
+
+  return (
+    type === 'recovery' ||
+    Boolean(hash.get('access_token') && hash.get('refresh_token')) ||
+    Boolean(params.get('token_hash') && type === 'recovery')
+  )
+}
+
 function AppRoutes() {
+  const location = useLocation()
+  const shouldShowResetPassword =
+    location.pathname === '/' && isPasswordRecoveryUrl()
+
+  if (shouldShowResetPassword) {
+    return (
+      <Navigate
+        to={{
+          pathname: '/reset-password',
+          search: location.search,
+          hash: location.hash,
+        }}
+        replace
+      />
+    )
+  }
+
   return (
     <Routes>
       <Route
@@ -45,6 +79,9 @@ function AppRoutes() {
           </PublicOnlyPage>
         }
       />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route
         element={
           <ProtectedPage>

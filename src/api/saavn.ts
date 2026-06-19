@@ -1,4 +1,6 @@
 import type { Album, Playlist, Song } from '../types'
+import { secureJsonFetch } from '../lib/apiClient'
+import { auditLog, captureAppError } from '../lib/monitoring'
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, '')
@@ -60,11 +62,20 @@ function sanitizeApiValue<T>(value: T): T {
 }
 
 async function fetchApi<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`)
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  const json = await res.json()
-  if (!json.success) throw new Error('API request failed')
-  return sanitizeApiValue(json.data) as T
+  try {
+    const json = await secureJsonFetch<{ success?: boolean; data?: unknown }>(`${BASE}${path}`, {
+      retries: 2,
+      validate: (value): value is { success?: boolean; data?: unknown } =>
+        Boolean(value && typeof value === 'object' && 'success' in value && 'data' in value),
+    })
+    if (!json.success) throw new Error('API request failed')
+    return sanitizeApiValue(json.data) as T
+  } catch (error) {
+    const eventType = path.startsWith('/search') ? 'search_failure' : path.startsWith('/songs') ? 'playback_failure' : 'api_failure'
+    await auditLog(eventType, { path })
+    await captureAppError(error, { path, eventType })
+    throw error
+  }
 }
 
 function normalizeSearchQuery(query: string) {
@@ -217,9 +228,9 @@ export const LYRICISTS_BY_LANGUAGE: Record<string, LyricistRef[]> = {
   tamil: [
     { id: '457542', name: 'Vairamuthu' },
     { id: '456470', name: 'Thamarai' },
-    { id: '455663', name: 'Anirudh Ravichander' },
-    { id: '455454', name: 'G.V. Prakash Kumar' },
-    { id: '773021', name: 'Hiphop Tamizha' },
+    { id: '455170', name: 'Vaali' },
+    { id: '455126', name: 'Na. Muthukumar' },
+    { id: '455125', name: 'Madhan Karky' },
   ],
   telugu: [{ id: '455178', name: 'Ramajogayya Sastry' }],
   malayalam: [{ id: '758680', name: 'Vinayak Sasikumar' }],

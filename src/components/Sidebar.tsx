@@ -48,7 +48,7 @@ export default function Sidebar({ navOpen = false, onNavigate }: SidebarProps) {
         ))}
       </nav>
 
-      <InstallButton className="sidebar-install-btn" showWhenUnavailable />
+      <InstallButton className="sidebar-install-btn" />
 
       {user ? (
         <div className="sidebar-footer">

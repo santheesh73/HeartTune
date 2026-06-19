@@ -141,6 +141,70 @@ http://localhost:3000
 
 ---
 
+## Required Environment Variables
+
+Add these values in `.env.local` for local development and in your hosting provider for production:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+NEXT_PUBLIC_SAAVN_API_URL=https://saavn.sumit.co
+NEXT_PUBLIC_API_BASE_URL=/api
+```
+
+`NEXT_PUBLIC_API_BASE_URL=/api` uses the Next.js rewrite in `next.config.mjs` to proxy API requests to `NEXT_PUBLIC_SAAVN_API_URL`.
+
+## Supabase Setup
+
+Run the SQL in `supabase/schema.sql` in your Supabase SQL editor before using production auth and library features.
+
+HeartTune password reset uses Supabase password recovery links. To make the reset email mention HeartTune instead of Supabase default wording, paste `supabase/email-templates/password-recovery.html` into Supabase Dashboard > `Authentication` > `Emails` > `Templates` > `Password Recovery`. Set the subject to `Reset your HeartTune password`. The template must include `{{ .ConfirmationURL }}`.
+
+In Supabase Auth settings, add your deployed domain to the allowed redirect URLs, for example:
+
+```text
+https://your-domain.vercel.app
+https://your-domain.vercel.app/**
+https://your-domain.vercel.app/reset-password
+http://localhost:3000
+http://localhost:3000/**
+http://localhost:3000/reset-password
+```
+
+Password reset links will not work reliably unless the exact `/reset-password` URL for local and production is allowed in Supabase.
+
+## Deploy To Vercel
+
+1. Push the repository to GitHub.
+2. Import the project in Vercel.
+3. Set the environment variables listed above.
+4. Use the default Next.js framework settings.
+5. Deploy.
+
+The included `vercel.json` pins the build to:
+
+```bash
+npm ci
+npm run build
+```
+
+## Production Checks
+
+```bash
+npm run build
+npm run start
+```
+
+The app registers the service worker only in production. After deploying, verify:
+
+- The app loads at the deployed URL.
+- Search and playback can reach `/api`.
+- Sign up/sign in works with your Supabase project.
+- The PWA install prompt appears in supported browsers.
+- `/offline.html`, `/manifest.json`, and `/service-worker.js` return successfully.
+
+---
+
 ## 📂 Project Structure
 
 ```text
