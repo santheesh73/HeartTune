@@ -120,6 +120,8 @@ export default function Home() {
             </motion.button>
           ))}
         </div>
+
+        <TamilArtistAlbums />
       </div>
     )
   }

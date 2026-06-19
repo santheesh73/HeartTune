@@ -1,6 +1,8 @@
-const STATIC_CACHE = 'hearttune-static-v2'
+const STATIC_CACHE = 'hearttune-static-v3'
 const PAGE_CACHE = 'hearttune-pages-v1'
+const IMAGE_CACHE = 'hearttune-images-v1'
 const OFFLINE_URL = '/offline.html'
+const FALLBACK_IMAGE_URL = '/icons/icon-192.png'
 const PRECACHE_URLS = [
   OFFLINE_URL,
   '/manifest.json',
@@ -23,6 +25,7 @@ self.addEventListener('activate', (event) => {
       Promise.all(
         keys
           .filter((key) => key !== STATIC_CACHE && key !== PAGE_CACHE)
+          .filter((key) => key !== IMAGE_CACHE)
           .map((key) => caches.delete(key))
       )
     ).then(() => self.clients.claim())
@@ -79,13 +82,36 @@ async function staleWhileRevalidate(request) {
   return cachedResponse || networkPromise
 }
 
+async function cacheFirstImage(request) {
+  const cache = await caches.open(IMAGE_CACHE)
+  const cachedResponse = await cache.match(request)
+
+  if (cachedResponse) return cachedResponse
+
+  try {
+    const response = await fetch(request)
+    if (response.ok || response.type === 'opaque') {
+      await cache.put(request, response.clone())
+    }
+    return response
+  } catch {
+    const fallback = await caches.match(FALLBACK_IMAGE_URL)
+    return fallback || Response.error()
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const requestUrl = new URL(request.url)
 
   if (request.method !== 'GET') return
 
-  // Leave Supabase, JioSaavn, and other cross-origin requests untouched.
+  if (request.destination === 'image') {
+    event.respondWith(cacheFirstImage(request))
+    return
+  }
+
+  // Leave Supabase, JioSaavn API, and other non-image cross-origin requests untouched.
   if (requestUrl.origin !== self.location.origin) return
 
   if (request.mode === 'navigate') {
