@@ -4,46 +4,6 @@ import { fileURLToPath } from 'node:url'
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 const saavnApiOrigin = (process.env.NEXT_PUBLIC_SAAVN_API_URL || 'https://saavn.sumit.co').replace(/\/+$/, '')
-const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin
-  : 'https://*.supabase.co'
-
-const securityHeaders = [
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "object-src 'none'",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      process.env.NODE_ENV === 'production' ? "script-src 'self'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      process.env.NODE_ENV === 'production' ? "script-src-elem 'self'" : "script-src-elem 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.scdn.co https://*.jiosaavn.com https://c.saavncdn.com https://api.dicebear.com",
-      "font-src 'self' data:",
-      `connect-src 'self' ${process.env.NODE_ENV === 'production' ? '' : 'ws: wss:'} ${supabaseOrigin} https://*.supabase.co wss://*.supabase.co ${saavnApiOrigin} https://saavn.sumit.co https://api.dicebear.com https://*.ingest.sentry.io https://*.sentry.io`,
-      "media-src 'self' blob: https://*.jiosaavn.com https://c.saavncdn.com",
-      "worker-src 'self'",
-      "manifest-src 'self'",
-      'upgrade-insecure-requests',
-    ].join('; '),
-  },
-  {
-    key: 'Strict-Transport-Security',
-    value: process.env.NODE_ENV === 'production' ? 'max-age=63072000; includeSubDomains; preload' : 'max-age=0',
-  },
-  { key: 'X-Frame-Options', value: 'DENY' },
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  {
-    key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()',
-  },
-  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
-  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
-  { key: 'Cross-Origin-Embedder-Policy', value: 'credentialless' },
-]
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -63,10 +23,6 @@ const nextConfig = {
   },
   async headers() {
     return [
-      {
-        source: '/:path*',
-        headers: securityHeaders,
-      },
       {
         source: '/service-worker.js',
         headers: [

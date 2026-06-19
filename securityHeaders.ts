@@ -2,31 +2,54 @@ import type { NextResponse } from 'next/server'
 
 const isProduction = process.env.NODE_ENV === 'production'
 
-const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin
-  : 'https://*.supabase.co'
-const saavnOrigin = (process.env.NEXT_PUBLIC_SAAVN_API_URL || 'https://saavn.sumit.co').replace(/\/+$/, '')
+function getOrigin(value: string | undefined) {
+  if (!value) return ''
+
+  try {
+    return new URL(value).origin
+  } catch {
+    return value.replace(/\/+$/, '')
+  }
+}
+
+const supabaseOrigin = getOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL)
+const saavnOrigin = getOrigin(process.env.NEXT_PUBLIC_SAAVN_API_URL || 'https://saavn.sumit.co')
+
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "script-src 'self' 'unsafe-inline' https://browser.sentry-cdn.com",
+  "script-src-elem 'self' 'unsafe-inline' https://browser.sentry-cdn.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https:",
+  [
+    "connect-src 'self'",
+    'https:',
+    'wss:',
+    supabaseOrigin,
+    'https://*.supabase.co',
+    'https://*.supabase.in',
+    'wss://*.supabase.co',
+    'wss://*.supabase.in',
+    saavnOrigin,
+    'https://*.ingest.sentry.io',
+    'https://*.sentry.io',
+  ].filter(Boolean).join(' '),
+  "media-src 'self' blob: https:",
+  "worker-src 'self' blob:",
+  "frame-src 'self'",
+  "manifest-src 'self'",
+  isProduction ? 'upgrade-insecure-requests' : '',
+].filter(Boolean).join('; ')
 
 export const securityHeaders = [
   {
     key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "base-uri 'self'",
-      "object-src 'none'",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      isProduction ? "script-src 'self'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      isProduction ? "script-src-elem 'self'" : "script-src-elem 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.scdn.co https://*.jiosaavn.com https://c.saavncdn.com https://api.dicebear.com",
-      "font-src 'self' data:",
-      `connect-src 'self' ${isProduction ? '' : 'ws: wss:'} ${supabaseOrigin} https://*.supabase.co wss://*.supabase.co ${saavnOrigin} https://saavn.sumit.co https://api.dicebear.com https://*.ingest.sentry.io https://*.sentry.io`,
-      "media-src 'self' blob: https://*.jiosaavn.com https://c.saavncdn.com",
-      "worker-src 'self'",
-      "manifest-src 'self'",
-      'upgrade-insecure-requests',
-    ].join('; '),
+    value: csp,
   },
   {
     key: 'Strict-Transport-Security',

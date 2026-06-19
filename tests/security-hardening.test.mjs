@@ -6,6 +6,7 @@ const root = new URL('../', import.meta.url)
 const read = (path) => readFile(new URL(path, root), 'utf8')
 
 const securityHeaders = await read('securityHeaders.ts')
+const nextConfig = await read('next.config.mjs')
 const middleware = await read('middleware.ts')
 const app = await read('src/App.tsx')
 const authService = await read('src/services/authService.ts')
@@ -31,9 +32,15 @@ test('enterprise security headers are configured', () => {
     assert.match(securityHeaders, new RegExp(header))
   }
 
-  assert.match(securityHeaders, /isProduction \? "script-src 'self'"/)
-  assert.match(securityHeaders, /isProduction \? "script-src-elem 'self'"/)
-  assert.match(securityHeaders, /: "script-src 'self' 'unsafe-inline' 'unsafe-eval'"/)
+  assert.match(securityHeaders, /script-src 'self' 'unsafe-inline' https:\/\/browser\.sentry-cdn\.com/)
+  assert.match(securityHeaders, /worker-src 'self' blob:/)
+  assert.match(securityHeaders, /connect-src 'self'.*https:.*wss:/s)
+  assert.match(securityHeaders, /https:\/\/\*\.supabase\.co/)
+  assert.match(securityHeaders, /https:\/\/\*\.supabase\.in/)
+  assert.match(securityHeaders, /https:\/\/\*\.ingest\.sentry\.io/)
+  assert.match(securityHeaders, /media-src 'self' blob: https:/)
+  assert.doesNotMatch(nextConfig, /Content-Security-Policy/)
+  assert.match(middleware, /monitoring/)
 })
 
 test('protected routes and email verification are enforced in middleware', () => {
