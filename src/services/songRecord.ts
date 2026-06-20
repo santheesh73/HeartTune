@@ -1,6 +1,6 @@
 import { getBestAudioUrl, getArtistNames } from '../api/saavn'
 import type { Song } from '../types'
-import { getArtworkUrl } from '../utils/artwork'
+import { getSourceArtworkUrl } from '../utils/artwork'
 
 interface SongRecordShape {
   song_id: string
@@ -23,12 +23,16 @@ function parseArtists(artistName: string) {
 }
 
 export function buildSongRecord(song: Song): SongRecordShape {
+  const artworkUrl = getSourceArtworkUrl(song.image, '500x500')
+
   return {
     song_id: song.id,
     song_title: song.name,
     artist_name: getArtistNames(song),
     album_name: song.album?.name || '',
-    image_url: getArtworkUrl(song.image, '500x500'),
+    // The app icon is a rendering fallback, not song metadata. Saving it here
+    // makes a temporary missing image permanent across every future session.
+    image_url: artworkUrl || null,
     audio_url: getBestAudioUrl(song),
     duration: String(song.duration || 0),
   }

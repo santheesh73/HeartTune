@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "set NEXT_TEST_WASM=1&& set \"NEXT_TEST_WASM_DIR=%CD%\\node_modules\\@next\\swc-wasm-nodejs\"&& next dev --hostname 0.0.0.0 --port 3000 --webpack",
+    "dev": "next dev --hostname 0.0.0.0 --port 3000 --webpack",
     "build": "next build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

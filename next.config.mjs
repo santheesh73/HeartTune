@@ -13,6 +13,16 @@ const nextConfig = {
   poweredByHeader: false,
   typedRoutes: false,
   allowedDevOrigins: ['127.0.0.1'],
+  images: {
+    localPatterns: [
+      {
+        pathname: '/api/artwork',
+      },
+      {
+        pathname: '/images/**',
+      },
+    ],
+  },
   turbopack: {
     root: projectRoot,
   },

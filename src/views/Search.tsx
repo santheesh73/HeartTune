@@ -6,6 +6,7 @@ import {
   ensureMinimumSongs,
   searchSongs,
   searchRelatedSongs,
+  searchAlbumSongs,
   searchAlbums,
   getSongSuggestions,
   getArtistNames,
@@ -18,7 +19,8 @@ import AlbumCard from '../components/AlbumCard'
 import { useLanguage, type AppLanguage } from '../context/LanguageContext'
 import { usePlayer } from '../context/PlayerContext'
 import SongArtwork from '../components/SongArtwork'
-import { FALLBACK_ARTWORK_URL, getArtworkUrl } from '../utils/artwork'
+import { getArtworkUrl } from '../lib/utils/artwork'
+import ArtworkImage from '../components/ArtworkImage'
 
 type Tab = 'songs' | 'albums'
 const RECENT_SEARCHES_KEY = 'hearttune_recent_searches'
@@ -161,16 +163,22 @@ export default function Search() {
     setShowSuggestions(false)
     setParams({ q: trimmed })
     try {
-      const [s, related, a] = await Promise.all([
+      const [s, related, a, albumSongs] = await Promise.all([
         searchSongs(trimmed, 1, 24),
         searchRelatedSongs(trimmed, 16),
         searchAlbums(trimmed, 1, 12),
+        searchAlbumSongs(trimmed, language, 24),
       ])
       const primarySongs = filterFullSongs(s.results)
       const relatedSongs = filterFullSongs(related.results)
+      const soundtrackSongs = filterFullSongs(albumSongs)
       const languagePreferred = preferLanguageSongs(primarySongs, language)
       const relatedPreferred = preferLanguageSongs(relatedSongs, language)
-      const finalSongs = ensureMinimumSongs(languagePreferred, relatedPreferred, 16)
+      const finalSongs = ensureMinimumSongs(
+        [...soundtrackSongs, ...languagePreferred],
+        relatedPreferred,
+        16
+      )
 
       setSongs(finalSongs)
       setAlbums(a.results)
@@ -215,7 +223,7 @@ export default function Search() {
     setSuggestLoading(true)
     debounceRef.current = setTimeout(async () => {
       try {
-        const results = await getSongSuggestions(trimmed, 8)
+        const results = await getSongSuggestions(trimmed, 8, language)
         setSuggestions(preferLanguageSongs(results, language))
         setActiveSuggestion(-1)
       } catch {
@@ -359,7 +367,7 @@ export default function Search() {
                       }
                     }}
                   >
-                    <SongArtwork images={song.image} className="suggestion-thumb" size="150x150" />
+                    <SongArtwork images={song.image} alt={`${song.name} album artwork`} className="suggestion-thumb" size="150x150" />
                     <div className="suggestion-info">
                       <span className="suggestion-title">{song.name}</span>
                       <span className="suggestion-artist">{getArtistNames(song)}</span>
@@ -407,14 +415,11 @@ export default function Search() {
                 }}
               >
                 {item.imageUrl ? (
-                  <img
+                  <ArtworkImage
                     src={item.imageUrl}
-                    alt=""
+                    alt={`${item.title} artwork`}
                     className="recent-search-thumb"
-                    loading="lazy"
-                    onError={(event) => {
-                      event.currentTarget.src = FALLBACK_ARTWORK_URL
-                    }}
+                    sizes="56px"
                   />
                 ) : (
                   <span className="recent-search-thumb fallback">

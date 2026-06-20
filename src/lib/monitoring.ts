@@ -23,12 +23,16 @@ export async function auditLog(eventType: SecurityEventType, metadata: Record<st
     const { supabase } = await import('./supabase')
     if (!supabase) return
 
+    // Audit logging is best-effort and must not turn every anonymous API error
+    // into a second network failure. getSession() reads the persisted session;
+    // getUser() always contacts Supabase, even when nobody is signed in.
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session?.user) return
 
     const { error } = await supabase.from('security_logs').insert({
-      user_id: user?.id || null,
+      user_id: session.user.id,
       event_type: eventType,
       metadata: metadata as Json,
     })
@@ -36,8 +40,9 @@ export async function auditLog(eventType: SecurityEventType, metadata: Record<st
     if (error) {
       await captureAppError(error, { eventType, metadata })
     }
-  } catch (error) {
-    console.warn('Audit log skipped:', error)
+  } catch {
+    // Monitoring must never affect the user-facing request or flood the Next.js
+    // development error overlay when the logging backend is unavailable.
   }
 }
 import type { Json } from '../types/database'

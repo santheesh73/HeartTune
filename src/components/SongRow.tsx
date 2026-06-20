@@ -136,7 +136,7 @@ export default function SongRow({
       </span>
 
       <div className="song-row-info" onClick={handlePlay}>
-        <SongArtwork images={song.image} className="song-row-thumb" size="150x150" />
+        <SongArtwork images={song.image} alt={`${song.name} album artwork`} className="song-row-thumb" size="150x150" />
         <div>
           <p className={`song-row-title ${isCurrent ? 'playing' : ''}`}>{song.name}</p>
           <p className="song-row-artist">{getArtistNames(song)}</p>

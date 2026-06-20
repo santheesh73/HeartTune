@@ -2,10 +2,12 @@
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Play, Shuffle } from 'lucide-react'
-import { getAlbum, getBestImage } from '../api/saavn'
+import { getAlbum } from '../api/saavn'
+import { getArtworkCandidates } from '../lib/utils/artwork'
 import type { Album } from '../types'
 import { usePlayer } from '../context/PlayerContext'
 import SongRow from '../components/SongRow'
+import ArtworkImage from '../components/ArtworkImage'
 
 export default function AlbumPage() {
   const { id } = useParams<{ id: string }>()
@@ -45,7 +47,7 @@ export default function AlbumPage() {
   }
 
   const songs = album.songs || []
-  const image = getBestImage(album.image, '500x500')
+  const images = getArtworkCandidates(album.image, '500x500')
   const artists = album.artists?.primary?.map((a) => a.name).join(', ')
   const albumMeta = [artists, album.year, `${songs.length} songs`].filter(Boolean).join(' • ')
 
@@ -62,7 +64,14 @@ export default function AlbumPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <img src={image} alt={album.name} className="album-hero-image" />
+        <ArtworkImage
+          src={images[0]}
+          fallbackSrcs={images.slice(1)}
+          alt={album.name}
+          className="album-hero-image"
+          priority
+          sizes="(max-width: 640px) 180px, 200px"
+        />
         <div>
           <p className="playlist-type">Album</p>
           <h1>{album.name}</h1>

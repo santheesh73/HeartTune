@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { ImageQuality } from '../types'
-import { FALLBACK_ARTWORK_URL, getArtworkCandidates } from '../utils/artwork'
+import { getArtworkCandidates } from '../lib/utils/artwork'
+import ArtworkImage from './ArtworkImage'
 
 interface SongArtworkProps {
   images: ImageQuality[]
@@ -18,26 +19,14 @@ export default function SongArtwork({
   loading = 'lazy',
 }: SongArtworkProps) {
   const candidates = useMemo(() => getArtworkCandidates(images, size), [images, size])
-  const [index, setIndex] = useState(0)
-
-  useEffect(() => {
-    setIndex(0)
-  }, [candidates])
-
-  const src = candidates[index] || FALLBACK_ARTWORK_URL
-
   return (
-    <img
-      src={src}
+    <ArtworkImage
+      src={candidates[0]}
+      fallbackSrcs={candidates.slice(1)}
       alt={alt}
       className={className}
-      loading={loading}
-      decoding="async"
-      onError={() => {
-        setIndex((current) =>
-          current + 1 < candidates.length ? current + 1 : current
-        )
-      }}
+      priority={loading === 'eager'}
+      sizes={size === '150x150' ? '(max-width: 640px) 56px, 150px' : '(max-width: 640px) 50vw, 240px'}
     />
   )
 }

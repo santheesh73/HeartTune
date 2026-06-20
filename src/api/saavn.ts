@@ -197,10 +197,13 @@ export async function searchRelatedSongs(query: string, minimum = 20) {
   return { results: merged, total: Math.max(total, merged.length) }
 }
 
-export async function getSongSuggestions(query: string, limit = 8) {
+export async function getSongSuggestions(query: string, limit = 8, language = 'all') {
   if (!query.trim()) return []
-  const data = await searchSongs(query.trim(), 1, limit)
-  return filterFullSongs(data.results)
+  const [songs, albumSongs] = await Promise.all([
+    searchSongs(query.trim(), 1, limit),
+    searchAlbumSongs(query.trim(), language, limit).catch(() => []),
+  ])
+  return filterFullSongs(mergeUniqueSongs([...albumSongs, ...songs.results])).slice(0, limit)
 }
 
 export function isPreviewClip(song: Song) {
@@ -220,10 +223,11 @@ export function preferLanguageSongs(songs: Song[], language: string) {
 }
 
 export function ensureMinimumSongs(songs: Song[], fallbackSongs: Song[], minimum = 20) {
-  if (songs.length >= minimum) return songs
+  const primarySongs = mergeUniqueSongs(songs)
+  if (primarySongs.length >= minimum) return primarySongs
 
-  const combined = mergeUniqueSongs([...songs, ...fallbackSongs])
-  return combined.slice(0, Math.max(minimum, songs.length))
+  const combined = mergeUniqueSongs([...primarySongs, ...fallbackSongs])
+  return combined.slice(0, Math.max(minimum, primarySongs.length))
 }
 
 function normalizeSongLanguage(lang?: string) {
@@ -284,6 +288,51 @@ export async function searchAlbums(query: string, page = 1, limit = 12) {
     `/search/albums?query=${encodeURIComponent(query)}&page=${page}&limit=${limit}`
   )
   return data
+}
+
+function comparableTitle(value: string) {
+  return normalizeSearchQuery(value)
+    .toLowerCase()
+    .replace(/\b(movie|motion picture|original soundtrack|soundtrack|ost|songs?)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Find soundtrack albums matching a query and return their tracks. */
+export async function searchAlbumSongs(query: string, language = 'all', limit = 24) {
+  const normalized = normalizeSearchQuery(query)
+  if (!normalized) return []
+
+  const title = comparableTitle(normalized)
+  if (!title) return []
+  const albumQuery = language === 'all' ? normalized : `${normalized} ${language}`
+  const searches = await Promise.all([
+    searchAlbums(normalized, 1, 12),
+    ...(albumQuery === normalized ? [] : [searchAlbums(albumQuery, 1, 12)]),
+  ])
+
+  const albums = searches.flatMap((result) => result.results)
+  const uniqueAlbums = Array.from(new Map(albums.map((album) => [album.id, album])).values())
+  const ranked = uniqueAlbums
+    .map((album) => {
+      const albumTitle = comparableTitle(album.name)
+      const exactTitle = albumTitle === title
+      const titleMatch = exactTitle || albumTitle.includes(title) || title.includes(albumTitle)
+      const languageMatch = language === 'all' || normalizeSongLanguage(album.language) === language
+      return { album, score: (exactTitle ? 4 : titleMatch ? 2 : 0) + (languageMatch ? 1 : 0) }
+    })
+    .filter(({ score }) => score >= 2)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+
+  const albumRequests = await Promise.allSettled(ranked.map(({ album }) => getAlbum(album.id)))
+  const detailedAlbums = albumRequests.flatMap((result) =>
+    result.status === 'fulfilled' && result.value ? [result.value] : []
+  )
+  return mergeUniqueSongs(
+    detailedAlbums.flatMap((album) => album?.songs || [])
+  ).slice(0, limit)
 }
 
 export async function searchPlaylists(query: string, page = 1, limit = 12) {

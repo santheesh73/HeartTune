@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { getBestImage } from '../api/saavn'
+import { getArtworkCandidates } from '../lib/utils/artwork'
 import type { Album } from '../types'
+import ArtworkImage from './ArtworkImage'
 
 interface AlbumCardProps {
   album: Album
@@ -9,7 +10,7 @@ interface AlbumCardProps {
 }
 
 export default function AlbumCard({ album, index = 0 }: AlbumCardProps) {
-  const image = getBestImage(album.image, '500x500')
+  const images = getArtworkCandidates(album.image, '500x500')
 
   return (
     <motion.div
@@ -20,7 +21,13 @@ export default function AlbumCard({ album, index = 0 }: AlbumCardProps) {
     >
       <Link to={`/album/${album.id}`} className="album-card">
         <div className="album-card-image-wrap">
-          <img src={image} alt={album.name} className="album-card-image" loading="lazy" />
+          <ArtworkImage
+            src={images[0]}
+            fallbackSrcs={images.slice(1)}
+            alt={album.name}
+            className="album-card-image"
+            sizes="(max-width: 640px) 44vw, (max-width: 1100px) 25vw, 220px"
+          />
         </div>
         <h3 className="album-card-title">{album.name}</h3>
         <p className="album-card-artist">

@@ -152,8 +152,10 @@ export default function PlayerBar() {
               >
                 <SongArtwork
                   images={currentSong.image}
+                  alt={`${currentSong.name} album artwork`}
                   className="player-thumb mobile-mini-thumb"
                   size="150x150"
+                  loading="eager"
                 />
                 <div className="player-track-info mobile-mini-info">
                   <p className="player-title">{currentSong.name}</p>
@@ -203,7 +205,13 @@ export default function PlayerBar() {
           ) : (
             <>
               <div className="player-track">
-                <SongArtwork images={currentSong.image} className="player-thumb" size="150x150" />
+                <SongArtwork
+                  images={currentSong.image}
+                  alt={`${currentSong.name} album artwork`}
+                  className="player-thumb"
+                  size="150x150"
+                  loading="eager"
+                />
                 <div
                   className="player-track-info"
                   role="button"
@@ -330,7 +338,7 @@ export default function PlayerBar() {
                         }
                       }}
                     >
-                      <SongArtwork images={song.image} className="player-queue-thumb" size="150x150" />
+                      <SongArtwork images={song.image} alt={`${song.name} album artwork`} className="player-queue-thumb" size="150x150" />
                       <span className="player-queue-meta">
                         <strong>{song.name}</strong>
                         <small>{getArtistNames(song)}</small>
@@ -368,7 +376,7 @@ export default function PlayerBar() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             >
               <div className="player-fullscreen-bg">
-                <SongArtwork images={currentSong.image} className="player-fullscreen-bg-image" size="500x500" />
+                <SongArtwork images={currentSong.image} alt="" className="player-fullscreen-bg-image" size="500x500" loading="eager" />
                 <div className="player-fullscreen-overlay"></div>
               </div>
 
@@ -400,6 +408,7 @@ export default function PlayerBar() {
                       >
                         <SongArtwork
                           images={currentSong.image}
+                          alt={`${currentSong.name} album artwork`}
                           className="player-fullscreen-artwork"
                           size="500x500"
                           loading="eager"
@@ -494,7 +503,7 @@ export default function PlayerBar() {
                                 }
                               }}
                             >
-                              <SongArtwork images={song.image} className="player-queue-thumb" size="150x150" />
+                              <SongArtwork images={song.image} alt={`${song.name} album artwork`} className="player-queue-thumb" size="150x150" />
                               <span className="player-queue-meta">
                                 <strong>{song.name}</strong>
                                 <small>{getArtistNames(song)}</small>

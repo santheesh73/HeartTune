@@ -2,6 +2,34 @@ import type { Song } from '../types'
 import { supabase } from '../lib/supabase'
 import { buildSongRecord, mapRecordToSong } from './songRecord'
 import { assertNoSupabaseError, requireSupabase } from './serviceUtils'
+import { getSongs } from '../api/saavn'
+
+async function hydrateLikedSongs(songs: Song[]) {
+  if (!songs.length) return songs
+
+  try {
+    const freshSongs = await getSongs(songs.map((song) => song.id))
+    const freshById = new Map(freshSongs.map((song) => [song.id, song]))
+
+    return songs.map((song) => {
+      const freshSong = freshById.get(song.id)
+      if (!freshSong) return song
+
+      return {
+        ...song,
+        ...freshSong,
+        album: freshSong.album?.name ? freshSong.album : song.album,
+        artists: freshSong.artists?.primary?.length ? freshSong.artists : song.artists,
+        image: freshSong.image?.length ? freshSong.image : song.image,
+        downloadUrl: freshSong.downloadUrl?.length ? freshSong.downloadUrl : song.downloadUrl,
+        duration: freshSong.duration || song.duration,
+      }
+    })
+  } catch {
+    // Saved metadata still keeps the library usable while the catalog is offline.
+    return songs
+  }
+}
 
 export async function likeSong(userId: string, song: Song) {
   const client = requireSupabase(supabase)
@@ -43,7 +71,7 @@ export async function getLikedSongs(userId: string) {
     .order('created_at', { ascending: false })
 
   assertNoSupabaseError(error, 'Unable to load liked songs')
-  return (data || []).map((item) => mapRecordToSong(item))
+  return hydrateLikedSongs((data || []).map((item) => mapRecordToSong(item)))
 }
 
 export async function isSongLiked(userId: string, songId: string) {

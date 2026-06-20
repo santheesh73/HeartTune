@@ -203,6 +203,7 @@ export default function Home() {
                       song={entry.song}
                       queue={recentlyPlayed.map((item) => item.song)}
                       index={i}
+                      eager={i === 0}
                     />
                   ))}
                 </div>
@@ -224,7 +225,13 @@ export default function Home() {
             {trending.length > 0 ? (
               <div className="song-grid">
                 {trending.map((song, i) => (
-                  <SongCard key={song.id} song={song} queue={trending} index={i} />
+                  <SongCard
+                    key={song.id}
+                    song={song}
+                    queue={trending}
+                    index={i}
+                    eager={i === 0 && (!user || recentlyPlayed.length === 0)}
+                  />
                 ))}
               </div>
             ) : offlineRecommendationsOnly ? (

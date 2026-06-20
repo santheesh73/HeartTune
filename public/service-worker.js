@@ -1,8 +1,7 @@
 const STATIC_CACHE = 'hearttune-static-v4'
 const PAGE_CACHE = 'hearttune-pages-v1'
-const IMAGE_CACHE = 'hearttune-images-v2'
+const IMAGE_CACHE = 'hearttune-images-v3'
 const OFFLINE_URL = '/offline.html'
-const FALLBACK_IMAGE_URL = '/icons/icon-192.png'
 const PRECACHE_URLS = [
   OFFLINE_URL,
   '/manifest.json',
@@ -90,13 +89,16 @@ async function cacheFirstImage(request) {
 
   try {
     const response = await fetch(request)
-    if (response.ok || response.type === 'opaque') {
+    const isArtworkFallback = response.headers.get('X-HeartTune-Artwork-Fallback') === '1'
+    if (!isArtworkFallback && (response.ok || response.type === 'opaque')) {
       await cache.put(request, response.clone())
     }
     return response
   } catch {
-    const fallback = await caches.match(FALLBACK_IMAGE_URL)
-    return fallback || Response.error()
+    // Let the image element receive an error so ArtworkImage can try its next
+    // CDN/mirror/proxy candidate. Returning the app icon here falsely marks a
+    // broken request as loaded and permanently hides valid album artwork.
+    return Response.error()
   }
 }
 

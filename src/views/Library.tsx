@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { Heart, Download, Clock, ChevronRight } from 'lucide-react'
 import { useLibrary } from '../context/LibraryContext'
 import { useAuth } from '../hooks/useAuth'
+import { getArtworkCandidates } from '../lib/utils/artwork'
+import ArtworkImage from '../components/ArtworkImage'
 
 export default function Library() {
   const { likedSongs, downloadCount } = useLibrary()
@@ -65,15 +67,20 @@ export default function Library() {
             <Link to="/liked" className="see-all">See all</Link>
           </div>
           <div className="recent-liked">
-            {likedSongs.slice(0, 5).map((song) => (
+            {likedSongs.slice(0, 5).map((song) => {
+              const images = getArtworkCandidates(song.image, '150x150')
+              return (
               <div key={song.id} className="recent-item">
-                <img
-                  src={song.image?.[song.image.length - 1]?.url}
-                  alt=""
+                <ArtworkImage
+                  src={images[0]}
+                  fallbackSrcs={images.slice(1)}
+                  alt={`${song.name} album artwork`}
+                  sizes="48px"
                 />
                 <span>{song.name}</span>
               </div>
-            ))}
+              )
+            })}
           </div>
         </section>
       )}

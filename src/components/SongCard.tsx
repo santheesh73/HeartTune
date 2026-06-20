@@ -10,9 +10,10 @@ interface SongCardProps {
   song: Song
   queue?: Song[]
   index?: number
+  eager?: boolean
 }
 
-export default function SongCard({ song, queue, index = 0 }: SongCardProps) {
+export default function SongCard({ song, queue, index = 0, eager = false }: SongCardProps) {
   const { playSong, addToQueue, currentSong, isPlaying } = usePlayer()
   const [queueMessage, setQueueMessage] = useState('')
   const isCurrent = currentSong?.id === song.id
@@ -38,6 +39,7 @@ export default function SongCard({ song, queue, index = 0 }: SongCardProps) {
           alt={song.name}
           className="song-card-image"
           size="500x500"
+          loading={eager ? 'eager' : 'lazy'}
         />
         <motion.button
           className={`queue-overlay ${queueMessage ? 'visible' : ''}`}
