@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { addRecentlyPlayed, getRecentlyPlayed } from '../services/recentlyPlayedService'
+import {
+  addRecentlyPlayed,
+  getRecentlyPlayed,
+  RECENTLY_PLAYED_UPDATED_EVENT,
+} from '../services/recentlyPlayedService'
 import { getErrorMessage, isOffline, isOfflineError } from '../services/serviceUtils'
 import { useAuth } from './useAuth'
 import type { Song } from '../types'
@@ -56,6 +60,22 @@ export function useRecentlyPlayed(limit = 8) {
   useEffect(() => {
     void refreshRecentlyPlayed()
   }, [refreshRecentlyPlayed])
+
+  useEffect(() => {
+    if (!user) return
+
+    const handleRecentlyPlayedUpdate = (event: Event) => {
+      const updatedUserId = (event as CustomEvent<{ userId?: string }>).detail?.userId
+      if (updatedUserId === user.id) {
+        setRecentlyPlayed(readCachedRecentlyPlayed())
+      }
+    }
+
+    window.addEventListener(RECENTLY_PLAYED_UPDATED_EVENT, handleRecentlyPlayedUpdate)
+    return () => {
+      window.removeEventListener(RECENTLY_PLAYED_UPDATED_EVENT, handleRecentlyPlayedUpdate)
+    }
+  }, [readCachedRecentlyPlayed, user])
 
   const trackSong = useCallback(async (song: Song) => {
     if (!user) return

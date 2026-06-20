@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 const saavnApiOrigin = (process.env.NEXT_PUBLIC_SAAVN_API_URL || 'https://saavn.sumit.co').replace(/\/+$/, '')
 const hasSentryAuth = Boolean(process.env.SENTRY_AUTH_TOKEN)
+const sentryTunnelRoute = process.env.SENTRY_TUNNEL_ROUTE?.trim() || undefined
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -56,7 +57,9 @@ export default withSentryConfig(nextConfig, {
   project: process.env.SENTRY_PROJECT || 'hearttune',
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  tunnelRoute: '/monitoring',
+  // Keep local/self-hosted servers from becoming an outbound Sentry proxy.
+  // Deployments that need an ad-blocker-resistant tunnel can opt in explicitly.
+  tunnelRoute: sentryTunnelRoute,
   sourcemaps: {
     disable: !hasSentryAuth,
     deleteSourcemapsAfterUpload: true,
