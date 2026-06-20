@@ -20,7 +20,6 @@ import ResetPassword from './views/ResetPassword'
 import VerifyEmail from './views/VerifyEmail'
 import { useAuth } from './hooks/useAuth'
 import AppLogoLoader from './components/AppLogoLoader'
-import MobileStartupSplash from './components/MobileStartupSplash'
 
 function ProtectedPage({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth()
@@ -124,18 +123,16 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <MobileStartupSplash>
-      <BrowserRouter>
-        <AuthProvider>
-          <LanguageProvider>
-            <LibraryProvider>
-              <PlayerProvider>
-                <AppRoutes />
-              </PlayerProvider>
-            </LibraryProvider>
-          </LanguageProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </MobileStartupSplash>
+    <BrowserRouter>
+      <AuthProvider>
+        <LanguageProvider>
+          <LibraryProvider>
+            <PlayerProvider>
+              <AppRoutes />
+            </PlayerProvider>
+          </LibraryProvider>
+        </LanguageProvider>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }

@@ -131,45 +131,6 @@ input {
   }
 }
 
-/* Mobile-only startup splash */
-.mobile-startup-splash {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: grid;
-  place-items: center;
-  min-height: 100dvh;
-  background: #000;
-}
-
-.mobile-startup-logo {
-  width: clamp(190px, 48vw, 260px);
-  height: auto;
-  object-fit: contain;
-  animation: mobileStartupLogo 1.4s ease-in-out both;
-}
-
-@keyframes mobileStartupLogo {
-  0% {
-    opacity: 0;
-    transform: scale(0.88);
-  }
-  30%, 78% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.04);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mobile-startup-logo {
-    animation: none;
-  }
-}
-
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
