@@ -8,7 +8,7 @@ import { useAuth } from './useAuth'
 const LAST_LIKED_SONGS_CACHE_KEY = 'hearttune-liked-songs:last'
 
 export function useLikedSongs() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, authAvailable } = useAuth()
   const [likedSongs, setLikedSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,6 +37,12 @@ export function useLikedSongs() {
     setLoading(true)
     setError(null)
 
+    if (!authAvailable || isOffline()) {
+      setLikedSongs(readCachedLikedSongs())
+      setLoading(false)
+      return
+    }
+
     try {
       const songs = await getLikedSongs(user.id)
       setLikedSongs(songs)
@@ -51,7 +57,7 @@ export function useLikedSongs() {
     } finally {
       setLoading(false)
     }
-  }, [persistLikedSongs, readCachedLikedSongs, user])
+  }, [authAvailable, persistLikedSongs, readCachedLikedSongs, user])
 
   useEffect(() => {
     void refreshLikedSongs()
@@ -75,6 +81,16 @@ export function useLikedSongs() {
       return { success: false, error: message }
     }
 
+    if (!authAvailable || isOffline()) {
+      setLikedSongs((prev) => {
+        const next = [song, ...prev.filter((item) => item.id !== song.id)]
+        persistLikedSongs(next)
+        return next
+      })
+      setError(null)
+      return { success: true, error: null }
+    }
+
     try {
       await likeSong(user.id, song)
       setLikedSongs((prev) => {
@@ -94,7 +110,7 @@ export function useLikedSongs() {
       setError(message)
       return { success: false, error: message }
     }
-  }, [isAuthenticated, persistLikedSongs, readCachedLikedSongs, user])
+  }, [authAvailable, isAuthenticated, persistLikedSongs, readCachedLikedSongs, user])
 
   const unlike = useCallback(async (songId: string) => {
     if (!user || !isAuthenticated) {
@@ -107,6 +123,16 @@ export function useLikedSongs() {
       const message = 'Please sign in to manage liked songs.'
       setError(message)
       return { success: false, error: message }
+    }
+
+    if (!authAvailable || isOffline()) {
+      setLikedSongs((prev) => {
+        const next = prev.filter((item) => item.id !== songId)
+        persistLikedSongs(next)
+        return next
+      })
+      setError(null)
+      return { success: true, error: null }
     }
 
     try {
@@ -128,7 +154,7 @@ export function useLikedSongs() {
       setError(message)
       return { success: false, error: message }
     }
-  }, [isAuthenticated, persistLikedSongs, readCachedLikedSongs, user])
+  }, [authAvailable, isAuthenticated, persistLikedSongs, readCachedLikedSongs, user])
 
   const toggleLikedSong = useCallback(async (song: Song) => {
     if (isSongLiked(song.id)) return unlike(song.id)

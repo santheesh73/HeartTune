@@ -128,6 +128,10 @@ export default function Search() {
   const { playSong } = usePlayer()
   const searchWrapRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchRequestRef = useRef(0)
+  const suggestionRequestRef = useRef(0)
+  const lastSearchQueryRef = useRef('')
+  const lastSearchLanguageRef = useRef(language)
 
   const saveRecentSearchItem = useCallback((item: RecentSearchItem) => {
     setRecentSearches((prev) => {
@@ -158,6 +162,10 @@ export default function Search() {
     const trimmed = decodeHtmlEntities(q).trim()
     if (!trimmed) return
 
+    const requestId = searchRequestRef.current + 1
+    searchRequestRef.current = requestId
+    lastSearchQueryRef.current = trimmed
+    lastSearchLanguageRef.current = language
     setLoading(true)
     setSearched(true)
     setShowSuggestions(false)
@@ -180,25 +188,32 @@ export default function Search() {
         16
       )
 
+      if (requestId !== searchRequestRef.current) return
       setSongs(finalSongs)
       setAlbums(a.results)
       setQuery(trimmed)
+      setActiveTab((tab) => (tab === 'albums' && a.results.length === 0 ? 'songs' : tab))
       if (finalSongs[0]) {
         saveRecentSearchItem(buildSongRecentItem(finalSongs[0], trimmed))
       } else if (a.results[0]) {
         saveRecentSearchItem(buildAlbumRecentItem(a.results[0], trimmed))
       }
     } catch {
+      if (requestId !== searchRequestRef.current) return
       setSongs([])
       setAlbums([])
     } finally {
-      setLoading(false)
+      if (requestId === searchRequestRef.current) {
+        setLoading(false)
+      }
     }
   }, [language, saveRecentSearchItem, setParams])
 
   useEffect(() => {
-    if (initialQ) void doSearch(initialQ)
-  }, [doSearch, initialQ])
+    if (initialQ && (initialQ !== lastSearchQueryRef.current || language !== lastSearchLanguageRef.current)) {
+      void doSearch(initialQ)
+    }
+  }, [doSearch, initialQ, language])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -214,6 +229,8 @@ export default function Search() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
     const trimmed = query.trim()
+    const requestId = suggestionRequestRef.current + 1
+    suggestionRequestRef.current = requestId
     if (!trimmed) {
       setSuggestions([])
       setSuggestLoading(false)
@@ -224,12 +241,16 @@ export default function Search() {
     debounceRef.current = setTimeout(async () => {
       try {
         const results = await getSongSuggestions(trimmed, 8, language)
+        if (requestId !== suggestionRequestRef.current) return
         setSuggestions(preferLanguageSongs(results, language))
         setActiveSuggestion(-1)
       } catch {
+        if (requestId !== suggestionRequestRef.current) return
         setSuggestions([])
       } finally {
-        setSuggestLoading(false)
+        if (requestId === suggestionRequestRef.current) {
+          setSuggestLoading(false)
+        }
       }
     }, 300)
 
@@ -269,10 +290,6 @@ export default function Search() {
       setActiveSuggestion(-1)
     }
   }
-
-  useEffect(() => {
-    if (searched && query.trim()) void doSearch(query)
-  }, [doSearch, query, searched])
 
   const handleRecentSearchClick = (item: RecentSearchItem) => {
     saveRecentSearchItem(item)

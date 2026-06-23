@@ -10,7 +10,7 @@ function getFriendlyAuthMessage(message: string, mode: 'signin' | 'signup') {
   const normalized = message.toLowerCase()
 
   if (normalized.includes('failed to fetch')) {
-    return 'Unable to reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in your environment, then try again.'
+    return 'Offline mode is active. Sign in again to continue with the library saved on this device.'
   }
 
   if (mode === 'signin' && normalized.includes('invalid login credentials')) {
@@ -103,8 +103,8 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="login-form">
           {!authAvailable && (
-            <p className="login-error">
-              Sign-in is unavailable until Supabase is configured correctly in `.env.local` or `.env`.
+            <p className="login-offline-note">
+              Offline mode: sign in with your email to use HeartTune on this device.
             </p>
           )}
 
@@ -158,7 +158,7 @@ export default function Login() {
             className="login-btn"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            disabled={loading || !authAvailable}
+            disabled={loading}
           >
             {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
           </motion.button>

@@ -35,14 +35,95 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 const SUPABASE_UNAVAILABLE_MESSAGE =
-  'Unable to reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in `.env.local` or `.env`.'
+  'Offline mode is active. Your session and library changes are saved on this device.'
+const LOCAL_AUTH_SESSION_KEY = 'hearttune-auth:session'
+const LOCAL_AUTH_USERS_KEY = 'hearttune-auth:users'
+
+interface LocalAuthRecord {
+  id: string
+  email: string
+  name: string
+  avatar?: string
+}
 
 function isSupabaseNetworkError(error: unknown) {
-  return getErrorMessage(error).toLowerCase().includes('failed to fetch')
+  const message = getErrorMessage(error).toLowerCase()
+  return (
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('supabase is not configured')
+  )
 }
 
 function buildAvatar(name: string) {
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
+  const seed = encodeURIComponent(name || 'HeartTune User')
+  return `/avatars/avatar-${(seed.length % 4) + 1}.svg`
+}
+
+function readLocalAuthUsers(): LocalAuthRecord[] {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const raw = window.localStorage.getItem(LOCAL_AUTH_USERS_KEY)
+    return raw ? (JSON.parse(raw) as LocalAuthRecord[]) : []
+  } catch {
+    return []
+  }
+}
+
+function writeLocalAuthUsers(users: LocalAuthRecord[]) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(LOCAL_AUTH_USERS_KEY, JSON.stringify(users))
+  } catch {
+    // Ignore storage failures so offline auth never crashes the app.
+  }
+}
+
+function readLocalSession(): User | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(LOCAL_AUTH_SESSION_KEY)
+    return raw ? (JSON.parse(raw) as User) : null
+  } catch {
+    return null
+  }
+}
+
+function writeLocalSession(nextUser: User | null) {
+  if (typeof window === 'undefined') return
+
+  try {
+    if (nextUser) {
+      window.localStorage.setItem(LOCAL_AUTH_SESSION_KEY, JSON.stringify(nextUser))
+    } else {
+      window.localStorage.removeItem(LOCAL_AUTH_SESSION_KEY)
+    }
+  } catch {
+    // Ignore storage failures so auth state updates stay non-fatal.
+  }
+}
+
+function upsertLocalUser(email: string, name?: string, avatar?: string): User {
+  const normalizedEmail = email.trim().toLowerCase()
+  const users = readLocalAuthUsers()
+  const existing = users.find((item) => item.email.toLowerCase() === normalizedEmail)
+  const fallbackName = name?.trim() || existing?.name || normalizedEmail.split('@')[0] || 'HeartTune User'
+  const nextUser: User = {
+    id: existing?.id || `local-${normalizedEmail.replace(/[^a-z0-9]+/g, '-') || Date.now()}`,
+    email: normalizedEmail,
+    name: fallbackName,
+    avatar: avatar || existing?.avatar || buildAvatar(fallbackName),
+  }
+
+  writeLocalAuthUsers([
+    nextUser,
+    ...users.filter((item) => item.id !== nextUser.id && item.email.toLowerCase() !== normalizedEmail),
+  ])
+  writeLocalSession(nextUser)
+  return nextUser
 }
 
 function mapUser(session: Session | null, fullName?: string | null, avatarUrl?: string | null): User | null {
@@ -78,7 +159,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    setUser(mapUser(nextSession))
+    const fallbackUser = mapUser(nextSession)
+    setUser(fallbackUser)
+    if (fallbackUser) writeLocalSession(fallbackUser)
 
     try {
       let profile = await getProfile(nextSession.user.id)
@@ -96,7 +179,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
       }
 
-      setUser(mapUser(nextSession, profile.full_name, profile.avatar_url))
+      const profiledUser = mapUser(nextSession, profile.full_name, profile.avatar_url)
+      setUser(profiledUser)
+      if (profiledUser) writeLocalSession(profiledUser)
     } catch (nextError) {
       setError(getErrorMessage(nextError, 'Unable to load your profile'))
     }
@@ -105,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     if (!authAvailable || !isSupabaseConfigured || !supabase) {
       setSession(null)
-      setUser(null)
+      setUser(readLocalSession())
       setError(null)
       setLoading(false)
       return
@@ -129,8 +214,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (nextError) {
       if (isSupabaseNetworkError(nextError)) {
         setAuthAvailable(false)
-        setError(SUPABASE_UNAVAILABLE_MESSAGE)
-        setUser(null)
+        setError(null)
+        setUser(readLocalSession())
         return
       }
       setError(getErrorMessage(nextError, 'Unable to restore session'))
@@ -141,7 +226,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [authAvailable, hydrateSessionUser])
 
   useEffect(() => {
-    if (!authAvailable || !isSupabaseConfigured || !supabase) return
+    if (!authAvailable || !isSupabaseConfigured || !supabase) {
+      setSession(null)
+      setUser(readLocalSession())
+      setError(null)
+      setLoading(false)
+      return
+    }
 
     let mounted = true
 
@@ -156,8 +247,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (mounted) {
           if (isSupabaseNetworkError(nextError)) {
             setAuthAvailable(false)
-            setError(SUPABASE_UNAVAILABLE_MESSAGE)
-            setUser(null)
+            setError(null)
+            setUser(readLocalSession())
             return
           }
           setError(getErrorMessage(nextError, 'Unable to restore session'))
@@ -189,8 +280,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     if (!authAvailable) {
+      const localUser = upsertLocalUser(email, name)
+      setSession(null)
+      setUser(localUser)
       setLoading(false)
-      return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+      return { error: null }
     }
 
     try {
@@ -229,8 +323,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     if (!authAvailable) {
+      const localUser = upsertLocalUser(email)
+      setSession(null)
+      setUser(localUser)
       setLoading(false)
-      return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+      return { error: null }
     }
 
     try {
@@ -240,8 +337,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (nextError) {
       if (isSupabaseNetworkError(nextError)) {
         setAuthAvailable(false)
-        setError(SUPABASE_UNAVAILABLE_MESSAGE)
-        return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+        const localUser = upsertLocalUser(email)
+        setSession(null)
+        setUser(localUser)
+        setError(null)
+        return { error: null }
       }
       const message = getErrorMessage(nextError, 'Unable to sign in')
       setError(message)
@@ -256,7 +356,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     try {
-      await logoutUser()
+      if (authAvailable && isSupabaseConfigured && supabase) {
+        await logoutUser()
+      }
+      writeLocalSession(null)
       setSession(null)
       setUser(null)
     } catch (nextError) {
@@ -264,14 +367,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [authAvailable])
 
   const updateAvatar = useCallback(async (avatarUrl: string) => {
     if (!session?.user) {
+      if (user) {
+        const nextUser = upsertLocalUser(user.email, user.name, avatarUrl.trim() || buildAvatar(user.name))
+        setUser(nextUser)
+        return { error: null }
+      }
       return { error: 'Please sign in to update your avatar.' }
     }
 
     if (!authAvailable) {
+      if (user) {
+        const nextUser = upsertLocalUser(user.email, user.name, avatarUrl.trim() || buildAvatar(user.name))
+        setUser(nextUser)
+        return { error: null }
+      }
       return { error: SUPABASE_UNAVAILABLE_MESSAGE }
     }
 
@@ -314,10 +427,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfileDetails = useCallback(async ({ name, avatarUrl }: { name: string; avatarUrl?: string }) => {
     if (!session?.user) {
+      if (user) {
+        const nextUser = upsertLocalUser(user.email, name, avatarUrl || user.avatar)
+        setUser(nextUser)
+        return { error: null }
+      }
       return { error: 'Please sign in to update your profile.' }
     }
 
     if (!authAvailable) {
+      if (user) {
+        const nextUser = upsertLocalUser(user.email, name, avatarUrl || user.avatar)
+        setUser(nextUser)
+        return { error: null }
+      }
       return { error: SUPABASE_UNAVAILABLE_MESSAGE }
     }
 
@@ -355,22 +478,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (nextError) {
       if (isSupabaseNetworkError(nextError)) {
         setAuthAvailable(false)
-        setError(SUPABASE_UNAVAILABLE_MESSAGE)
-        return { error: SUPABASE_UNAVAILABLE_MESSAGE }
+        const localUser = upsertLocalUser(
+          session.user.email || user?.email || 'local@hearttune.offline',
+          trimmedName,
+          avatarUrl || user?.avatar
+        )
+        setSession(null)
+        setUser(localUser)
+        setError(null)
+        return { error: null }
       }
 
       const message = getErrorMessage(nextError, 'Unable to update profile')
       setError(message)
       return { error: message }
     }
-  }, [authAvailable, session])
+  }, [authAvailable, session, user])
 
   const value = useMemo(
     () => ({
       user,
       loading,
       error,
-      isAuthenticated: !!session?.user,
+      isAuthenticated: !!user,
       authAvailable,
       signUp,
       login,

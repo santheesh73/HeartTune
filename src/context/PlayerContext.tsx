@@ -70,6 +70,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const currentSongRef = useRef<Song | null>(null)
   const playNextRef = useRef<() => void | Promise<void>>(() => {})
   const autoRecommendationLoadingRef = useRef(false)
+  const isAdvancingRef = useRef(false)
 
   const updateDuration = useCallback((audio: HTMLAudioElement, song: Song | null) => {
     setDuration(getSongDuration(song, audio.duration))
@@ -77,37 +78,38 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const loadAndPlay = useCallback(async (song: Song) => {
     const audio = audioRef.current
-    if (!audio) return
-
-    audio.pause()
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current)
-      blobUrlRef.current = null
-    }
-
-    setProgress(0)
-
-    const download = await getDownload(song.id)
-    let src: string
-    let resolvedSong: Song
-
-    if (download) {
-      blobUrlRef.current = URL.createObjectURL(download.blob)
-      src = blobUrlRef.current
-      resolvedSong = download.song
-    } else {
-      const playable = await getPlayableAudioUrl(song)
-      resolvedSong = playable.song
-      src = playable.url
-    }
-
-    setCurrentSong(resolvedSong)
-    setDuration(resolvedSong.duration || 0)
-
-    audio.src = src
-    audio.load()
+    if (!audio) return false
 
     try {
+      audio.pause()
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
+
+      setProgress(0)
+
+      const download = await getDownload(song.id)
+      let src: string
+      let resolvedSong: Song
+
+      if (download) {
+        blobUrlRef.current = URL.createObjectURL(download.blob)
+        src = blobUrlRef.current
+        resolvedSong = download.song
+      } else {
+        const playable = await getPlayableAudioUrl(song)
+        resolvedSong = playable.song
+        src = playable.url
+      }
+
+      setCurrentSong(resolvedSong)
+      currentSongRef.current = resolvedSong
+      setDuration(resolvedSong.duration || 0)
+
+      audio.src = src
+      audio.load()
+
       await audio.play()
       setIsPlaying(true)
       updateDuration(audio, resolvedSong)
@@ -119,13 +121,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           }
         })
       }
-    } catch {
+      return true
+    } catch (error) {
+      console.error('Unable to play song:', error)
       setIsPlaying(false)
+      return false
     }
   }, [updateDuration, user])
 
   const playLanguageRecommendation = useCallback(async () => {
-    if (autoRecommendationLoadingRef.current) return
+    if (autoRecommendationLoadingRef.current) return false
 
     autoRecommendationLoadingRef.current = true
 
@@ -143,49 +148,79 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
       if (!recommendations.length) {
         setIsPlaying(false)
-        return
+        return false
       }
 
       setQueue(recommendations)
-      setQueueIndex(0)
-      await loadAndPlay(recommendations[0])
+      queueRef.current = recommendations
+
+      for (let index = 0; index < recommendations.length; index += 1) {
+        setQueueIndex(index)
+        queueIndexRef.current = index
+        const played = await loadAndPlay(recommendations[index])
+        if (played) return true
+      }
+
+      setIsPlaying(false)
+      return false
     } catch (error) {
       console.error('Unable to autoplay a language recommendation:', error)
       setIsPlaying(false)
+      return false
     } finally {
       autoRecommendationLoadingRef.current = false
     }
   }, [loadAndPlay])
 
   const playNextInternal = useCallback(async () => {
+    if (isAdvancingRef.current) return
+
+    isAdvancingRef.current = true
     const q = queueRef.current
     const idx = queueIndexRef.current
     const sh = shuffleRef.current
     const rep = repeatRef.current
 
-    if (!q.length) {
-      await playLanguageRecommendation()
-      return
-    }
-    let nextIdx = idx + 1
-    if (sh) {
-      if (q.length === 1) {
+    try {
+      if (!q.length) {
         await playLanguageRecommendation()
         return
       }
 
-      do {
-        nextIdx = Math.floor(Math.random() * q.length)
-      } while (nextIdx === idx)
-    } else if (nextIdx >= q.length) {
-      if (rep === 'all') nextIdx = 0
-      else {
-        await playLanguageRecommendation()
-        return
+      const attemptedIndexes = new Set<number>()
+      let nextIdx = idx
+
+      while (attemptedIndexes.size < q.length) {
+        if (sh && q.length > 1) {
+          const candidates = q
+            .map((_, index) => index)
+            .filter((index) => index !== idx && !attemptedIndexes.has(index))
+
+          if (!candidates.length) break
+          nextIdx = candidates[Math.floor(Math.random() * candidates.length)]
+        } else {
+          nextIdx += 1
+
+          if (nextIdx >= q.length) {
+            if (rep === 'all') nextIdx = 0
+            else break
+          }
+
+          if (attemptedIndexes.has(nextIdx)) break
+        }
+
+        attemptedIndexes.add(nextIdx)
+        setQueueIndex(nextIdx)
+        queueIndexRef.current = nextIdx
+
+        const played = await loadAndPlay(q[nextIdx])
+        if (played) return
       }
+
+      await playLanguageRecommendation()
+    } finally {
+      isAdvancingRef.current = false
     }
-    setQueueIndex(nextIdx)
-    void loadAndPlay(q[nextIdx])
   }, [loadAndPlay, playLanguageRecommendation])
 
   useEffect(() => {
@@ -204,22 +239,38 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audioRef.current = audio
     audio.volume = 0.8
 
-    const onTime = () => setProgress(audio.currentTime)
+    const onTime = () => {
+      setProgress(audio.currentTime)
+      if (
+        currentSongRef.current &&
+        Number.isFinite(audio.duration) &&
+        audio.duration > 0 &&
+        audio.currentTime > 0 &&
+        audio.duration - audio.currentTime <= 0.2
+      ) {
+        void playNextRef.current()
+      }
+    }
     const onDuration = () => updateDuration(audio, currentSongRef.current)
     const onEnd = () => {
       void playNextRef.current()
+    }
+    const onError = () => {
+      if (currentSongRef.current) void playNextRef.current()
     }
 
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('loadedmetadata', onDuration)
     audio.addEventListener('durationchange', onDuration)
     audio.addEventListener('ended', onEnd)
+    audio.addEventListener('error', onError)
 
     return () => {
       audio.removeEventListener('timeupdate', onTime)
       audio.removeEventListener('loadedmetadata', onDuration)
       audio.removeEventListener('durationchange', onDuration)
       audio.removeEventListener('ended', onEnd)
+      audio.removeEventListener('error', onError)
       audio.pause()
       if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
     }

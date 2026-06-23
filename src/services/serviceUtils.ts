@@ -13,7 +13,9 @@ export function isOfflineError(error: unknown) {
     isOffline() ||
     message.includes('failed to fetch') ||
     message.includes('networkerror') ||
-    message.includes('load failed')
+    message.includes('load failed') ||
+    message.includes('supabase is not configured') ||
+    message.includes('unable to reach supabase')
   )
 }
 
