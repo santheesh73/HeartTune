@@ -222,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           writeLocalSession(null)
           setSession(null)
           setUser(null)
-          setError(isBannedMessage ? 'Your account has been suspended.' : 'Your account has been removed.')
+          setError(isBannedMessage ? 'ADMIN IS BANNED YOU' : 'Your account has been removed.')
           setLoading(false)
           return
         }
@@ -275,7 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             writeLocalSession(null)
             setSession(null)
             setUser(null)
-            setError(isBannedMessage ? 'Your account has been suspended.' : 'Your account has been removed.')
+            setError(isBannedMessage ? 'ADMIN IS BANNED YOU' : 'Your account has been removed.')
             if (mounted) setLoading(false)
             return
           }
@@ -328,7 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             writeLocalSession(null)
             setSession(null)
             setUser(null)
-            setError('Your account has been suspended.')
+            setError('ADMIN IS BANNED YOU')
           }
         }
       )
