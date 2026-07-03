@@ -2,6 +2,9 @@ import { Link, NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Home, Search, Library, Heart, Download, UserCircle2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { useState } from 'react'
+import { useLibrary } from '../context/LibraryContext'
+import PlaylistModal from './PlaylistModal'
 import InstallButton from './InstallButton'
 
 const navItems = [
@@ -20,6 +23,8 @@ interface SidebarProps {
 
 export default function Sidebar({ navOpen = false, onNavigate }: SidebarProps) {
   const { user } = useAuth()
+  const { playlists } = useLibrary()
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (
     <aside className={`sidebar ${navOpen ? 'open' : ''}`} aria-hidden={!navOpen && undefined}>

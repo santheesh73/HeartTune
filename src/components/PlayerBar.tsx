@@ -61,6 +61,7 @@ export default function PlayerBar() {
   const [prevVolume, setPrevVolume] = useState(volume)
   const [theme, setTheme] = useState<SongTheme>(DEFAULT_THEME)
   const [showQueue, setShowQueue] = useState(false)
+  const [showLyrics, setShowLyrics] = useState(false)
   const image = currentSong ? getArtworkUrl(currentSong.image, '150x150') : ''
   const fullscreenImage = currentSong ? getArtworkUrl(currentSong.image, '500x500') : image
   const upcomingQueue = queue.filter((_, index) => index > queueIndex)

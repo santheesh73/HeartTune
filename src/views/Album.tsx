@@ -1,8 +1,9 @@
 ﻿import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Play, Shuffle } from 'lucide-react'
+import { Play, Shuffle, Heart, Share2 } from 'lucide-react'
 import { getAlbum } from '../api/saavn'
+import { useLibrary } from '../context/LibraryContext'
 import { getArtworkCandidates } from '../lib/utils/artwork'
 import type { Album } from '../types'
 import { usePlayer } from '../context/PlayerContext'
@@ -14,6 +15,7 @@ export default function AlbumPage() {
   const [album, setAlbum] = useState<Album | null>(null)
   const [loading, setLoading] = useState(true)
   const { playSong } = usePlayer()
+  const { isAlbumLiked, toggleLikedAlbum } = useLibrary()
 
   useEffect(() => {
     if (!id) return
@@ -90,6 +92,25 @@ export default function AlbumPage() {
         </motion.button>
         <button className="shuffle-btn" onClick={shufflePlay}>
           <Shuffle size={20} /> Shuffle
+        </button>
+        <button
+          className="p-2 ml-4 rounded-full border transition flex items-center justify-center"
+          style={{
+            borderColor: isAlbumLiked(album.id) ? 'var(--color-primary)' : 'rgba(255,255,255,0.2)',
+            color: isAlbumLiked(album.id) ? 'var(--color-primary)' : 'white'
+          }}
+          onClick={() => toggleLikedAlbum(album)}
+        >
+          <Heart size={20} fill={isAlbumLiked(album.id) ? 'currentColor' : 'none'} />
+        </button>
+        <button
+          className="p-2 ml-2 rounded-full border border-white/20 text-white hover:border-white transition flex items-center justify-center"
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href)
+            window.alert('Link copied to clipboard!')
+          }}
+        >
+          <Share2 size={20} />
         </button>
       </div>
 

@@ -15,6 +15,9 @@ import { useLikedSongs } from '../hooks/useLikedSongs'
 import { getDownloads, removeDownloadMetadata, saveDownloadMetadata } from '../services/downloadService'
 import { getErrorMessage, isOffline, isOfflineError } from '../services/serviceUtils'
 import { getAllDownloads, getDownload, removeDownload, saveDownload } from '../utils/downloads'
+import type { Album, UserPlaylist } from '../types'
+import { getUserPlaylists } from '../services/playlistService'
+import { getLikedAlbums, addLikedAlbum, removeLikedAlbum } from '../services/likedAlbumsService'
 
 interface LibraryContextType {
   likedSongs: Song[]
@@ -31,6 +34,11 @@ interface LibraryContextType {
   removeDownloaded: (id: string) => Promise<void>
   refreshDownloads: () => Promise<void>
   getLocalUrl: (id: string) => Promise<string | null>
+  playlists: UserPlaylist[]
+  refreshPlaylists: () => Promise<void>
+  likedAlbums: Album[]
+  isAlbumLiked: (id: string) => boolean
+  toggleLikedAlbum: (album: Album) => Promise<boolean>
 }
 
 const LibraryContext = createContext<LibraryContextType | null>(null)
@@ -50,6 +58,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const [downloadCount, setDownloadCount] = useState(0)
   const [downloadMetadataError, setDownloadMetadataError] = useState<string | null>(null)
   const blobCache = useRef<Map<string, string>>(new Map())
+  const [playlists, setPlaylists] = useState<UserPlaylist[]>([])
+  const [likedAlbums, setLikedAlbums] = useState<Album[]>([])
 
   const refreshDownloads = useCallback(async () => {
     try {
@@ -82,6 +92,66 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refreshDownloads()
   }, [refreshDownloads])
+
+  const refreshPlaylists = useCallback(async () => {
+    if (!user) {
+      setPlaylists([])
+      return
+    }
+    try {
+      const data = await getUserPlaylists(user.id)
+      setPlaylists(data)
+    } catch (err) {
+      console.error('Failed to refresh playlists', err)
+    }
+  }, [user])
+
+  const refreshLikedAlbums = useCallback(async () => {
+    if (!user) {
+      setLikedAlbums([])
+      return
+    }
+    try {
+      const data = await getLikedAlbums(user.id)
+      setLikedAlbums(data)
+    } catch (err) {
+      console.error('Failed to refresh liked albums', err)
+    }
+  }, [user])
+
+  useEffect(() => {
+    void refreshPlaylists()
+    void refreshLikedAlbums()
+  }, [refreshPlaylists, refreshLikedAlbums])
+
+  const isAlbumLiked = useCallback(
+    (id: string) => {
+      return likedAlbums.some((a) => a.id === id)
+    },
+    [likedAlbums]
+  )
+
+  const toggleLikedAlbum = useCallback(
+    async (album: Album) => {
+      if (!user) {
+        window.alert('Please sign in to like albums.')
+        return false
+      }
+      try {
+        const isCurrentlyLiked = isAlbumLiked(album.id)
+        if (isCurrentlyLiked) {
+          await removeLikedAlbum(user.id, album.id)
+        } else {
+          await addLikedAlbum(user.id, album)
+        }
+        await refreshLikedAlbums()
+        return !isCurrentlyLiked
+      } catch (err) {
+        return false
+      }
+    },
+    [user, isAlbumLiked, refreshLikedAlbums]
+  )
 
   const toggleLike = useCallback(async (song: Song) => {
     if (!isAuthenticated) {
@@ -190,6 +260,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       downloadMetadataError,
       isLiked: (id: string) => isSongLiked(id),
       toggleLike,
+      playlists,
+      refreshPlaylists,
+      likedAlbums,
+      isAlbumLiked,
+      toggleLikedAlbum,
       isDownloaded: (id: string) => downloadedIds.has(id),
       downloadSong,
       removeDownloaded,
@@ -207,6 +282,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       isSongLiked,
       downloadSong,
       getLocalUrl,
+      playlists,
+      refreshPlaylists,
+      likedAlbums,
+      isAlbumLiked,
+      toggleLikedAlbum,
       refreshDownloads,
       removeDownloaded,
       toggleLike,

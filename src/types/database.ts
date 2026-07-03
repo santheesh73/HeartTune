@@ -78,6 +78,39 @@ export interface Database {
         }
         Relationships: []
       }
+      liked_albums: {
+        Row: {
+          id: string
+          user_id: string
+          album_id: string
+          album_name: string
+          artist_name: string
+          image_url: string | null
+          year: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          album_id: string
+          album_name: string
+          artist_name: string
+          image_url?: string | null
+          year?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          album_id?: string
+          album_name?: string
+          artist_name?: string
+          image_url?: string | null
+          year?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       user_playlists: {
         Row: {
           id: string
@@ -270,6 +303,7 @@ export type ProfileRow = Database['public']['Tables']['profiles']['Row']
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
 export type LikedSongRow = Database['public']['Tables']['liked_songs']['Row']
+export type LikedAlbumRow = Database['public']['Tables']['liked_albums']['Row']
 export type PlaylistRow = Database['public']['Tables']['user_playlists']['Row']
 export type PlaylistUpdate = Database['public']['Tables']['user_playlists']['Update']
 export type PlaylistSongRow = Database['public']['Tables']['playlist_songs']['Row']

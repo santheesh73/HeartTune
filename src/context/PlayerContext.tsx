@@ -43,6 +43,10 @@ interface PlayerContextType {
   setVolume: (v: number) => void
   toggleShuffle: () => void
   toggleRepeat: () => void
+  moveInQueue: (fromIndex: number, toIndex: number) => void
+  playSongNext: (song: Song) => void
+  playSongLater: (song: Song) => void
+  clearQueue: () => void
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null)
@@ -388,6 +392,46 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const toggleShuffle = () => setShuffle((s) => !s)
   const toggleRepeat = () => setRepeat((r) => (r === 'off' ? 'all' : 'off'))
 
+  const moveInQueue = useCallback((fromIndex: number, toIndex: number) => {
+    setQueue((prevQueue) => {
+      const nextQueue = [...prevQueue]
+      const [movedItem] = nextQueue.splice(fromIndex, 1)
+      nextQueue.splice(toIndex, 0, movedItem)
+      return nextQueue
+    })
+    setQueueIndex((prevIndex) => {
+      if (fromIndex === prevIndex) return toIndex
+      if (fromIndex < prevIndex && toIndex >= prevIndex) return prevIndex - 1
+      if (fromIndex > prevIndex && toIndex <= prevIndex) return prevIndex + 1
+      return prevIndex
+    })
+  }, [])
+
+  const playSongNext = useCallback((song: Song) => {
+    setQueue((prevQueue) => {
+      if (prevQueue.length === 0) return [song]
+      const nextQueue = [...prevQueue]
+      nextQueue.splice(queueIndex + 1, 0, song)
+      return nextQueue
+    })
+  }, [queueIndex])
+
+  const playSongLater = useCallback((song: Song) => {
+    setQueue((prevQueue) => {
+      if (prevQueue.length === 0) return [song]
+      return [...prevQueue, song]
+    })
+  }, [])
+
+  const clearQueue = useCallback(() => {
+    setQueue((prevQueue) => {
+      if (prevQueue.length === 0) return []
+      return [prevQueue[queueIndex]]
+    })
+    setQueueIndex(0)
+  }, [queueIndex])
+
+
   return (
     <PlayerContext.Provider
       value={{
@@ -411,6 +455,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setVolume,
         toggleShuffle,
         toggleRepeat,
+        moveInQueue,
+        playSongNext,
+        playSongLater,
+        clearQueue,
       }}
     >
       {children}

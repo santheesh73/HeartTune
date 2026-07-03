@@ -276,6 +276,19 @@ export function getLyricistsForLanguage(language: string) {
   return LYRICISTS_BY_LANGUAGE[language] || LYRICISTS_BY_LANGUAGE.all
 }
 
+
+export async function getArtist(id: string) {
+  const data = await fetchApi<any>(`/artists?id=${id}`)
+  return data
+}
+
+export async function getArtistSongs(artistId: string, page = 1, limit = 20) {
+  const data = await fetchApi<{ total: number; songs: Song[] }>(
+    `/artists/${artistId}/songs?page=${page}&limit=${limit}`
+  )
+  return data
+}
+
 export async function getArtistAlbums(artistId: string, page = 1, limit = 12) {
   const data = await fetchApi<{ total: number; albums: Album[] }>(
     `/artists/${artistId}/albums?page=${page}&limit=${limit}`
