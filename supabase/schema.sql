@@ -5,6 +5,7 @@ create table if not exists public.profiles (
   username text,
   full_name text,
   avatar_url text,
+  is_banned boolean not null default false,
   created_at timestamptz not null default timezone('utc', now())
 );
 

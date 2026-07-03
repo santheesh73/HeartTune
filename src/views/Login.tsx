@@ -33,7 +33,7 @@ function getFriendlyAuthMessage(message: string, mode: 'signin' | 'signup') {
 }
 
 export default function Login() {
-  const { login, signUp, isAuthenticated, loading, authAvailable } = useAuth()
+  const { login, signUp, isAuthenticated, loading, authAvailable, error: contextError } = useAuth()
   const location = useLocation()
   const [isRegister, setIsRegister] = useState(false)
   const [name, setName] = useState('')
@@ -151,7 +151,7 @@ export default function Login() {
 
           {isRegister && <PasswordStrength password={password} />}
 
-          {error && <p className="login-error">{error}</p>}
+          {(error || contextError) && <p className="login-error">{error || contextError}</p>}
 
           <motion.button
             type="submit"

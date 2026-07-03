@@ -210,6 +210,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data, error: sessionError } = await client.auth.getSession()
       if (sessionError) throw sessionError
+
+      if (data.session) {
+        const { error: userError } = await client.auth.getUser()
+        if (userError) {
+          if (isSupabaseNetworkError(userError)) {
+            throw userError
+          }
+          const isBannedMessage = userError.message?.toLowerCase().includes('ban') || userError.message?.toLowerCase().includes('suspend')
+          await client.auth.signOut()
+          writeLocalSession(null)
+          setSession(null)
+          setUser(null)
+          setError(isBannedMessage ? 'Your account has been suspended.' : 'Your account has been removed.')
+          setLoading(false)
+          return
+        }
+      }
+
       await hydrateSessionUser(data.session)
     } catch (nextError) {
       if (isSupabaseNetworkError(nextError)) {
@@ -242,6 +260,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data, error: sessionError } = await client.auth.getSession()
         if (sessionError) throw sessionError
         if (!mounted) return
+
+        if (data.session) {
+          const { error: userError } = await client.auth.getUser()
+          if (userError) {
+            if (isSupabaseNetworkError(userError)) {
+              setAuthAvailable(false)
+              setError(null)
+              setUser(readLocalSession())
+              return
+            }
+            const isBannedMessage = userError.message?.toLowerCase().includes('ban') || userError.message?.toLowerCase().includes('suspend')
+            await client.auth.signOut()
+            writeLocalSession(null)
+            setSession(null)
+            setUser(null)
+            setError(isBannedMessage ? 'Your account has been suspended.' : 'Your account has been removed.')
+            if (mounted) setLoading(false)
+            return
+          }
+        }
+
         await hydrateSessionUser(data.session)
       } catch (nextError) {
         if (mounted) {
@@ -274,6 +313,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe()
     }
   }, [authAvailable, hydrateSessionUser])
+
+  useEffect(() => {
+    if (!authAvailable || !isSupabaseConfigured || !supabase || !session?.user?.id) return
+
+    const client = requireSupabase(supabase)
+    const channel = client.channel(`public:profiles:id=eq.${session.user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` },
+        async (payload) => {
+          if (payload.new && payload.new.is_banned) {
+            await client.auth.signOut()
+            writeLocalSession(null)
+            setSession(null)
+            setUser(null)
+            setError('Your account has been suspended.')
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      client.removeChannel(channel)
+    }
+  }, [authAvailable, session?.user?.id])
 
   const signUp = useCallback(async (name: string, email: string, password: string) => {
     setLoading(true)
