@@ -573,7 +573,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateAvatar,
       updateProfileDetails,
     }),
-    [authAvailable, error, loading, logout, refreshUser, session?.user, signUp, login, updateAvatar, updateProfileDetails, user]
+    [authAvailable, error, loading, logout, refreshUser, signUp, login, updateAvatar, updateProfileDetails, user]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { motion, Reorder, AnimatePresence } from 'framer-motion'
-import { X, Trash2, GripVertical, ListMusic } from 'lucide-react'
+import { X, Trash2, GripVertical, ListMusic, ChevronUp, ChevronDown } from 'lucide-react'
 import { usePlayer } from '../context/PlayerContext'
-import type { Song } from '../types'
 
 interface QueuePanelProps {
   isOpen: boolean
@@ -10,43 +8,7 @@ interface QueuePanelProps {
 }
 
 export default function QueuePanel({ isOpen, onClose }: QueuePanelProps) {
-  const { queue, queueIndex, playQueueAt, removeFromQueue, moveInQueue, clearQueue, currentSong } = usePlayer()
-
-  // Track the local queue state for framer-motion Reorder
-  // When a drag ends, we'll sync it with the PlayerContext
-  const handleReorder = (newQueue: Song[]) => {
-    // Reorder gives us the whole new array, but we only have `moveInQueue(from, to)` in our context.
-    // However, it's easier to just call a context method that sets the entire queue if we had it.
-    // Since we don't have `setQueue` exposed, we can find the moved item and use `moveInQueue`.
-    // For a robust UI, we should really expose `setQueue` or just use the drag ends to calculate from/to.
-    // As a workaround, we'll just not use Reorder if we don't have setQueue, or we can use Reorder and 
-    // compute the diff. 
-    // To keep it simple, let's just use standard array mapping here and add a "drag" handle.
-    // If Reorder is complex without `setQueue`, we can just list them normally for now or use Reorder with local state.
-  }
-
-  // Let's implement a simpler queue list for now, since we only have `moveInQueue` and `removeFromQueue`
-  // Actually, we can use `moveInQueue` by tracking drag start and drop.
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
-
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIndex(index)
-    e.dataTransfer.effectAllowed = 'move'
-    // For Firefox compatibility
-    e.dataTransfer.setData('text/html', e.currentTarget.innerHTML)
-  }
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (e: React.DragEvent, index: number) => {
-    e.preventDefault()
-    if (draggedIndex !== null && draggedIndex !== index) {
-      moveInQueue(draggedIndex, index)
-    }
-    setDraggedIndex(null)
-  }
+  const { queue, queueIndex, playQueueAt, removeFromQueue, moveInQueue, clearQueue, reorderQueue } = usePlayer()
 
   return (
     <AnimatePresence>
@@ -69,7 +31,7 @@ export default function QueuePanel({ isOpen, onClose }: QueuePanelProps) {
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <ListMusic size={20} className="text-white/70" />
-                <h2 className="text-lg font-bold">Queue</h2>
+                <h2 className="text-lg font-bold">Queue ({queue.length})</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -94,53 +56,71 @@ export default function QueuePanel({ isOpen, onClose }: QueuePanelProps) {
                   Your queue is empty
                 </div>
               ) : (
-                queue.map((song, idx) => {
-                  const isActive = idx === queueIndex
-                  return (
-                    <div
-                      key={`${song.id}-${idx}`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, idx)}
-                      onDragOver={(e) => handleDragOver(e, idx)}
-                      onDrop={(e) => handleDrop(e, idx)}
-                      className={`flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors ${
-                        isActive ? 'bg-[var(--color-primary)]/20' : 'hover:bg-white/5'
-                      }`}
-                    >
-                      <div className="text-white/30 cursor-grab">
-                        <GripVertical size={16} />
-                      </div>
-                      <div className="relative w-10 h-10 flex-shrink-0 bg-white/5 rounded overflow-hidden">
-                        {song.image && song.image.length > 0 && (
-                          <img src={song.image[song.image.length - 1].url} alt="" className="w-full h-full object-cover" />
-                        )}
-                        {isActive && (
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <div className="w-4 h-4 flex items-end justify-center gap-[2px]">
-                              <motion.div animate={{ height: ['4px', '12px', '4px'] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-1 bg-[var(--color-primary)]" />
-                              <motion.div animate={{ height: ['8px', '4px', '8px'] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-1 bg-[var(--color-primary)]" />
-                              <motion.div animate={{ height: ['6px', '14px', '6px'] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-1 bg-[var(--color-primary)]" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0" onDoubleClick={() => playQueueAt(idx)}>
-                        <p className={`text-sm font-medium truncate ${isActive ? 'text-[var(--color-primary)]' : 'text-white'}`}>
-                          {song.name}
-                        </p>
-                        <p className="text-xs text-white/50 truncate">
-                          {song.artists?.primary?.map(a => a.name).join(', ')}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => removeFromQueue(idx)}
-                        className="p-1.5 text-white/30 hover:text-white transition opacity-0 group-hover:opacity-100 lg:opacity-100"
+                <Reorder.Group axis="y" values={queue} onReorder={reorderQueue} className="space-y-2">
+                  {queue.map((song, idx) => {
+                    const isActive = idx === queueIndex
+                    return (
+                      <Reorder.Item
+                        key={`${song.id}-${idx}`}
+                        value={song}
+                        className={`flex items-center gap-3 p-2 rounded-lg cursor-grab active:cursor-grabbing transition-colors group ${
+                          isActive ? 'bg-[var(--color-primary)]/20' : 'hover:bg-white/5'
+                        }`}
                       >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  )
-                })
+                        <div className="text-white/30 cursor-grab flex items-center justify-center">
+                          <GripVertical size={16} />
+                        </div>
+                        <div className="relative w-10 h-10 flex-shrink-0 bg-white/5 rounded overflow-hidden">
+                          {song.image && song.image.length > 0 && (
+                            <img src={song.image[song.image.length - 1].url} alt="" className="w-full h-full object-cover" />
+                          )}
+                          {isActive && (
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                              <div className="w-4 h-4 flex items-end justify-center gap-[2px]">
+                                <motion.div animate={{ height: ['4px', '12px', '4px'] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-1 bg-[var(--color-primary)]" />
+                                <motion.div animate={{ height: ['8px', '4px', '8px'] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-1 bg-[var(--color-primary)]" />
+                                <motion.div animate={{ height: ['6px', '14px', '6px'] }} transition={{ repeat: Infinity, duration: 0.8 }} className="w-1 bg-[var(--color-primary)]" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0" onDoubleClick={() => playQueueAt(idx)}>
+                          <p className={`text-sm font-medium truncate ${isActive ? 'text-[var(--color-primary)]' : 'text-white'}`}>
+                            {song.name}
+                          </p>
+                          <p className="text-xs text-white/50 truncate">
+                            {song.artists?.primary?.map(a => a.name).join(', ')}
+                          </p>
+                        </div>
+                        <div className="flex items-center opacity-0 group-hover:opacity-100 lg:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => idx > 0 && moveInQueue(idx, idx - 1)}
+                            className={`p-1.5 transition ${idx === 0 ? 'text-white/10 cursor-not-allowed' : 'text-white/30 hover:text-white'}`}
+                            disabled={idx === 0}
+                            title="Move Up"
+                          >
+                            <ChevronUp size={16} />
+                          </button>
+                          <button
+                            onClick={() => idx < queue.length - 1 && moveInQueue(idx, idx + 1)}
+                            className={`p-1.5 transition ${idx === queue.length - 1 ? 'text-white/10 cursor-not-allowed' : 'text-white/30 hover:text-white'}`}
+                            disabled={idx === queue.length - 1}
+                            title="Move Down"
+                          >
+                            <ChevronDown size={16} />
+                          </button>
+                          <button
+                            onClick={() => removeFromQueue(idx)}
+                            className="p-1.5 text-white/30 hover:text-white transition"
+                            title="Remove from Queue"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </Reorder.Item>
+                    )
+                  })}
+                </Reorder.Group>
               )}
             </div>
           </motion.div>

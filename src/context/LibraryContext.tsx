@@ -146,7 +146,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         }
         await refreshLikedAlbums()
         return !isCurrentlyLiked
-      } catch (err) {
+      } catch {
         return false
       }
     },

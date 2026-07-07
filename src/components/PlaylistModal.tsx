@@ -45,8 +45,8 @@ export default function PlaylistModal({ isOpen, onClose, playlist }: PlaylistMod
       }
       await refreshPlaylists()
       onClose()
-    } catch (err: any) {
-      setError(err.message || 'Failed to save playlist')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save playlist')
     } finally {
       setLoading(false)
     }
@@ -55,107 +55,100 @@ export default function PlaylistModal({ isOpen, onClose, playlist }: PlaylistMod
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="modal-backdrop">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="modal-overlay"
             onClick={onClose}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#1a1a1a] shadow-2xl"
+            className="modal-content"
           >
-            <div className="flex items-center justify-between border-b border-white/10 p-4">
-              <h2 className="text-lg font-semibold text-white">
+            <div className="modal-header">
+              <h2 className="modal-title">
                 {playlist ? 'Edit Playlist' : 'Create Playlist'}
               </h2>
               <button
                 onClick={onClose}
-                className="rounded-full p-2 text-white/50 transition hover:bg-white/10 hover:text-white"
+                className="modal-close-btn"
               >
                 <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+            <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {error && (
-                <div className="rounded-md bg-red-500/10 p-3 text-sm text-red-500">
+                <div style={{ color: 'var(--red-primary)', fontSize: '0.875rem' }}>
                   {error}
                 </div>
               )}
               
-              <div>
-                <label className="mb-1 block text-sm font-medium text-white/70">
-                  Name
-                </label>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="My Awesome Playlist"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-[var(--color-primary)] focus:bg-white/10"
+                  className="form-input"
                   required
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-white/70">
-                  Description <span className="text-white/40">(Optional)</span>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">
+                  Description <span style={{ opacity: 0.5, fontWeight: 'normal' }}>(Optional)</span>
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What's this playlist about?"
                   rows={3}
-                  className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder-white/30 outline-none transition focus:border-[var(--color-primary)] focus:bg-white/10"
+                  className="form-input"
+                  style={{ resize: 'none' }}
                 />
               </div>
 
-              <div className="flex items-center gap-3 py-2">
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: 0, marginTop: '8px' }}>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={isPublic}
                   onClick={() => setIsPublic(!isPublic)}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    isPublic ? 'bg-[var(--color-primary)]' : 'bg-white/10'
-                  }`}
+                  className={`toggle-switch ${isPublic ? 'active' : 'inactive'}`}
                 >
-                  <span
-                    aria-hidden="true"
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      isPublic ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
+                  <span aria-hidden="true" className="toggle-thumb" />
                 </button>
                 <div>
-                  <p className="text-sm font-medium text-white">Public Playlist</p>
-                  <p className="text-xs text-white/50">Let others find and view this playlist</p>
+                  <p style={{ fontWeight: 500, fontSize: '0.875rem' }}>Public Playlist</p>
+                  <p style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.5)' }}>Let others find and view this playlist</p>
                 </div>
               </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-full px-5 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !name.trim()}
-                  className="flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-black transition hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
-                >
-                  {loading && <Loader size={16} className="animate-spin" />}
-                  {playlist ? 'Save Changes' : 'Create'}
-                </button>
-              </div>
             </form>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                disabled={loading || !name.trim()}
+                className="btn-primary"
+              >
+                {loading && <Loader size={16} className="spin" />}
+                {playlist ? 'Save Changes' : 'Create'}
+              </button>
+            </div>
           </motion.div>
         </div>
       )}

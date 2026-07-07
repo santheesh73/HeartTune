@@ -21,6 +21,8 @@ import { usePlayer } from '../context/PlayerContext'
 import SongArtwork from '../components/SongArtwork'
 import { getArtworkUrl } from '../lib/utils/artwork'
 import ArtworkImage from '../components/ArtworkImage'
+import { useAuth } from '../hooks/useAuth'
+import { addSearchHistory } from '../services/searchHistoryService'
 
 type Tab = 'songs' | 'albums'
 const RECENT_SEARCHES_KEY = 'hearttune_recent_searches'
@@ -132,6 +134,7 @@ export default function Search() {
   const suggestionRequestRef = useRef(0)
   const lastSearchQueryRef = useRef('')
   const lastSearchLanguageRef = useRef(language)
+  const { user } = useAuth()
 
   const saveRecentSearchItem = useCallback((item: RecentSearchItem) => {
     setRecentSearches((prev) => {
@@ -161,6 +164,10 @@ export default function Search() {
   const doSearch = useCallback(async (q: string) => {
     const trimmed = decodeHtmlEntities(q).trim()
     if (!trimmed) return
+
+    if (user?.id) {
+      void addSearchHistory(user.id, trimmed)
+    }
 
     const requestId = searchRequestRef.current + 1
     searchRequestRef.current = requestId
@@ -207,7 +214,7 @@ export default function Search() {
         setLoading(false)
       }
     }
-  }, [language, saveRecentSearchItem, setParams])
+  }, [language, saveRecentSearchItem, setParams, user?.id])
 
   useEffect(() => {
     if (initialQ && (initialQ !== lastSearchQueryRef.current || language !== lastSearchLanguageRef.current)) {

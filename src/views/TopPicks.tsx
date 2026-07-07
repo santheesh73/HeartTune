@@ -46,7 +46,7 @@ export default function TopPicks() {
           searchAlbums(language === 'all' ? 'bollywood' : language, 1, 8),
         ])
         const fullSongs = filterFullSongs(songsData.results)
-        const filtered = preferLanguageSongs(fullSongs, language).slice(0, 12)
+        const filtered = preferLanguageSongs(fullSongs, language).slice(0, 24)
         setTrending(filtered)
         setAlbums(albumsData.results)
         writeOfflineCache(`hearttune-home:${language}`, {
@@ -109,15 +109,16 @@ export default function TopPicks() {
               ) : recentlyPlayed.length === 0 ? (
                 <p className="lyricist-subtitle">Songs you play will appear here.</p>
               ) : (
-                <div className="song-grid">
+                <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {recentlyPlayed.map((entry, i) => (
-                    <SongCard
-                      key={entry.id}
-                      song={entry.song}
-                      queue={recentlyPlayed.map((item) => item.song)}
-                      index={i}
-                      eager={i === 0}
-                    />
+                    <div key={entry.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+                      <SongCard
+                        song={entry.song}
+                        queue={recentlyPlayed.map((item) => item.song)}
+                        index={i}
+                        eager={i === 0}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
@@ -135,21 +136,23 @@ export default function TopPicks() {
                 </button>
               )}
             </div>
-            {trending.length > 0 ? (
-              <div className="song-grid">
+            {trending.length > 0 && (
+              <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {trending.map((song, i) => (
-                  <SongCard
-                    key={song.id}
-                    song={song}
-                    queue={trending}
-                    index={i}
-                    eager={i === 0 && (!user || recentlyPlayed.length === 0)}
-                  />
+                  <div key={song.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+                    <SongCard
+                      song={song}
+                      queue={trending}
+                      index={i}
+                      eager={i === 0 && (!user || recentlyPlayed.length === 0)}
+                    />
+                  </div>
                 ))}
               </div>
-            ) : offlineRecommendationsOnly ? (
+            )}
+            {trending.length === 0 && offlineRecommendationsOnly && (
               <p className="lyricist-subtitle">Connect once online to refresh your top picks.</p>
-            ) : null}
+            )}
           </section>
 
           {language === 'tamil' ? <TamilArtistAlbums /> : null}
@@ -160,15 +163,18 @@ export default function TopPicks() {
                 <Sparkles size={22} /> Popular Albums
               </h2>
             </div>
-            {albums.length > 0 ? (
-              <div className="album-grid">
+            {albums.length > 0 && (
+              <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {albums.map((album, i) => (
-                  <AlbumCard key={album.id} album={album} index={i} />
+                  <div key={album.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+                    <AlbumCard album={album} index={i} />
+                  </div>
                 ))}
               </div>
-            ) : offlineRecommendationsOnly ? (
+            )}
+            {albums.length === 0 && offlineRecommendationsOnly && (
               <p className="lyricist-subtitle">Popular albums will appear here after the next online refresh.</p>
-            ) : null}
+            )}
           </section>
 
           <LyricistAlbums language={language} />

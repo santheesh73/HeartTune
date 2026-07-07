@@ -24,9 +24,13 @@ if (typeof window !== 'undefined') {
   // so we hide the Supabase fetch errors that it automatically logs.
   const originalConsoleError = console.error
   console.error = function (...args) {
-    const msg = args[0]
-    if (typeof msg === 'string' && (msg.includes('Failed to fetch') || msg.includes('AuthRetryableFetchError'))) return
-    if (msg && msg.message && (msg.message.includes('Failed to fetch') || msg.name === 'AuthRetryableFetchError')) return
+    const isNetworkError = args.some((arg) => 
+      (typeof arg === 'string' && (arg.includes('Failed to fetch') || arg.includes('API request failed'))) ||
+      (arg && typeof arg === 'object' && arg.message && (arg.message.includes('Failed to fetch') || arg.message.includes('API request failed'))) ||
+      (arg && typeof arg === 'object' && arg.name === 'AuthRetryableFetchError')
+    )
+    if (isNetworkError) return
+
     originalConsoleError.apply(console, args)
   }
 }

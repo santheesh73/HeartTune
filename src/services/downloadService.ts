@@ -30,6 +30,10 @@ export async function saveDownloadMetadata(userId: string, song: Song) {
 
   assertNoSupabaseError(error, 'Unable to save download metadata')
   await auditLog('download_activity', { action: 'save', songId: song.id })
+  
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hearttune:recommendations-invalidate'))
+  }
 }
 
 export async function getDownloads(userId: string) {
@@ -54,4 +58,8 @@ export async function removeDownloadMetadata(userId: string, songId: string) {
 
   assertNoSupabaseError(error, 'Unable to remove download metadata')
   await auditLog('download_activity', { action: 'remove', songId })
+  
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hearttune:recommendations-invalidate'))
+  }
 }

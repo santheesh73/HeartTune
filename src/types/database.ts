@@ -261,6 +261,30 @@ export interface Database {
         }
         Relationships: []
       }
+      search_history: {
+        Row: {
+          id: string
+          user_id: string
+          query: string
+          type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          query: string
+          type?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          query?: string
+          type?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       security_logs: {
         Row: {
           id: string
@@ -310,3 +334,4 @@ export type PlaylistSongRow = Database['public']['Tables']['playlist_songs']['Ro
 export type RecentlyPlayedRow = Database['public']['Tables']['recently_played']['Row']
 export type DownloadRow = Database['public']['Tables']['downloads']['Row']
 export type SecurityLogRow = Database['public']['Tables']['security_logs']['Row']
+export type SearchHistoryRow = Database['public']['Tables']['search_history']['Row']

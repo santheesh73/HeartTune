@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Song, UserPlaylist } from '../types'
 import {
   addSongToPlaylist,
+  addSongsToPlaylist,
   createPlaylist,
   deletePlaylist,
   getPlaylists,
@@ -106,6 +107,24 @@ export function usePlaylists() {
     [refreshPlaylists, user]
   )
 
+  const addSongs = useCallback(
+    async (playlistId: string, songs: Song[]) => {
+      if (!user) return { added: false, error: 'Please sign in to manage playlists.' }
+
+      try {
+        const added = await addSongsToPlaylist(playlistId, user.id, songs)
+        await refreshPlaylists()
+        setError(null)
+        return { added, error: null }
+      } catch (nextError) {
+        const message = getErrorMessage(nextError, 'Unable to add songs to playlist')
+        setError(message)
+        return { added: false, error: message }
+      }
+    },
+    [refreshPlaylists, user]
+  )
+
   const removeSong = useCallback(async (playlistId: string, songId: string) => {
     try {
       await removeSongFromPlaylist(playlistId, songId)
@@ -139,6 +158,7 @@ export function usePlaylists() {
     createPlaylist: createUserPlaylist,
     loadPlaylist,
     addSongToPlaylist: addSong,
+    addSongsToPlaylist: addSongs,
     removeSongFromPlaylist: removeSong,
     deletePlaylist: removePlaylist,
   }

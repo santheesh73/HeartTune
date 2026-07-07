@@ -1,6 +1,5 @@
 import type { Album } from '../types'
 import { supabase } from '../lib/supabase'
-import { auditLog } from '../lib/monitoring'
 import { assertNoSupabaseError, requireSupabase } from './serviceUtils'
 import type { LikedAlbumRow } from '../types/database'
 

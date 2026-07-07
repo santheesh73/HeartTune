@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import { PlayerProvider } from './context/PlayerContext'
 import { LibraryProvider } from './context/LibraryContext'
 import { LanguageProvider } from './context/LanguageContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Layout from './components/Layout'
 import Login from './views/Login'
 import Home from './views/Home'
@@ -15,9 +16,12 @@ import Downloads from './views/Downloads'
 import AlbumPage from './views/Album'
 import TopPicks from './views/TopPicks'
 import Profile from './views/Profile'
+import Settings from './views/Settings'
 import ForgotPassword from './views/ForgotPassword'
 import ResetPassword from './views/ResetPassword'
 import VerifyEmail from './views/VerifyEmail'
+import PlaylistDetail from './views/PlaylistDetail'
+import ArtistPage from './views/Artist'
 import { useAuth } from './hooks/useAuth'
 import AppLogoLoader from './components/AppLogoLoader'
 
@@ -112,9 +116,11 @@ function AppRoutes() {
           }
         />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/playlists" element={<Navigate to="/library" replace />} />
-        <Route path="/playlists/:id" element={<Navigate to="/library" replace />} />
+        <Route path="/playlist/:id" element={<PlaylistDetail />} />
         <Route path="/album/:id" element={<AlbumPage />} />
+        <Route path="/artist/:id" element={<ArtistPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
@@ -124,15 +130,17 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <LanguageProvider>
-          <LibraryProvider>
-            <PlayerProvider>
-              <AppRoutes />
-            </PlayerProvider>
-          </LibraryProvider>
-        </LanguageProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <LibraryProvider>
+              <PlayerProvider>
+                <AppRoutes />
+              </PlayerProvider>
+            </LibraryProvider>
+          </LanguageProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

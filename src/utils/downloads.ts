@@ -70,6 +70,16 @@ export async function removeDownload(id: string) {
   })
 }
 
+export async function clearAllDownloads() {
+  const db = await openDb()
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite')
+    tx.objectStore(STORE).clear()
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
 export async function isDownloaded(id: string) {
   const entry = await getDownload(id)
   return !!entry

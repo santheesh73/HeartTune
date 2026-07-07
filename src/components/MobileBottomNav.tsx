@@ -1,4 +1,4 @@
-import { Heart, Home, Search, Download, UserCircle2 } from 'lucide-react'
+import { Heart, Home, Search, Download, Library } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 const navItems = [
@@ -6,7 +6,7 @@ const navItems = [
   { to: '/search', icon: Search, label: 'Search' },
   { to: '/liked', icon: Heart, label: 'Liked' },
   { to: '/downloads', icon: Download, label: 'Downloaded' },
-  { to: '/profile', icon: UserCircle2, label: 'Profile' },
+  { to: '/library', icon: Library, label: 'Library' },
 ]
 
 export default function MobileBottomNav() {

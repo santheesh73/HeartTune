@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Mic2, Loader } from 'lucide-react'
 import { usePlayer } from '../context/PlayerContext'
+import { getLyrics, LyricsData } from '../api/lyrics'
+import { parseLrc, SyncedLyricLine } from '../utils/lyrics'
 
 interface LyricsPanelProps {
   isOpen: boolean
@@ -9,26 +11,63 @@ interface LyricsPanelProps {
 }
 
 export default function LyricsPanel({ isOpen, onClose }: LyricsPanelProps) {
-  const { currentSong } = usePlayer()
-  const [lyrics, setLyrics] = useState<string | null>(null)
+  const { currentSong, progress } = usePlayer()
+  const [lyricsData, setLyricsData] = useState<LyricsData | null>(null)
+  const [syncedLines, setSyncedLines] = useState<SyncedLyricLine[]>([])
   const [loading, setLoading] = useState(false)
+  
+  const containerRef = useRef<HTMLDivElement>(null)
+  const activeLineRef = useRef<HTMLParagraphElement>(null)
+
+  let activeIndex = -1
+  if (syncedLines.length > 0) {
+    for (let i = 0; i < syncedLines.length; i++) {
+      if (syncedLines[i].time <= progress) {
+        activeIndex = i
+      } else {
+        break
+      }
+    }
+  }
 
   useEffect(() => {
     if (!isOpen || !currentSong) return
     let mounted = true
     setLoading(true)
-    setLyrics(null)
+    setLyricsData(null)
+    setSyncedLines([])
 
-    // Mock lyrics fetch - architecture ready for future API
-    setTimeout(() => {
+    const fetchLyrics = async () => {
+      const artistName = currentSong.artists?.primary?.[0]?.name || ''
+      const data = await getLyrics(currentSong.name, artistName)
+      
       if (mounted) {
-        setLyrics(`(Instrumental Intro)\n\nThis is a placeholder for lyrics.\nCurrently the JioSaavn API wrapper doesn't provide synced lyrics.\n\nBut the architecture is ready.\nWe can plug in the lyrics API here.\n\nSong: ${currentSong.name}\nArtist: ${currentSong.artists?.primary?.map(a => a.name).join(', ') || 'Unknown'}\n\n(Chorus)\nLa la la la la\nHeartTune is the best PWA\n\nEnjoy your music!`)
+        setLyricsData(data)
+        if (data?.syncedLyrics) {
+          setSyncedLines(parseLrc(data.syncedLyrics))
+        }
         setLoading(false)
       }
-    }, 1000)
+    }
+
+    fetchLyrics()
 
     return () => { mounted = false }
   }, [isOpen, currentSong])
+
+  useEffect(() => {
+    if (activeLineRef.current && containerRef.current && !loading) {
+      const container = containerRef.current
+      const activeLine = activeLineRef.current
+      const offsetTop = activeLine.offsetTop
+      const scrollTarget = offsetTop - container.clientHeight / 2 + activeLine.clientHeight / 2
+      
+      container.scrollTo({
+        top: scrollTarget,
+        behavior: 'smooth'
+      })
+    }
+  }, [activeIndex, loading])
 
   return (
     <AnimatePresence>
@@ -61,7 +100,7 @@ export default function LyricsPanel({ isOpen, onClose }: LyricsPanelProps) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+            <div ref={containerRef} className="flex-1 overflow-y-auto p-6 pb-32 scrollbar-hide scroll-smooth relative">
               {!currentSong ? (
                 <div className="flex h-full items-center justify-center text-white/50 text-center">
                   Play a song to see lyrics
@@ -69,12 +108,35 @@ export default function LyricsPanel({ isOpen, onClose }: LyricsPanelProps) {
               ) : loading ? (
                 <div className="flex h-full flex-col items-center justify-center text-white/50 gap-4">
                   <Loader size={32} className="animate-spin text-[var(--color-primary)]" />
-                  <p>Loading lyrics...</p>
+                  <p>Searching for lyrics...</p>
                 </div>
-              ) : lyrics ? (
-                <div className="space-y-6">
-                  {lyrics.split('\n\n').map((paragraph, i) => (
-                    <p key={i} className="text-lg leading-relaxed text-white/90 font-medium">
+              ) : syncedLines.length > 0 ? (
+                <div className="space-y-6 pt-[30vh]">
+                  {syncedLines.map((line, i) => {
+                    const isActive = i === activeIndex
+                    const isPassed = i < activeIndex
+                    
+                    return (
+                      <p 
+                        key={i} 
+                        ref={isActive ? activeLineRef : null}
+                        className={`text-2xl lg:text-3xl font-bold leading-tight transition-all duration-300 ${
+                          isActive 
+                            ? 'text-white scale-105 origin-left' 
+                            : isPassed
+                              ? 'text-white/30'
+                              : 'text-white/50 hover:text-white/70'
+                        }`}
+                      >
+                        {line.text || '♪'}
+                      </p>
+                    )
+                  })}
+                </div>
+              ) : lyricsData?.plainLyrics ? (
+                <div className="space-y-6 pt-4">
+                  {lyricsData.plainLyrics.split('\n\n').map((paragraph, i) => (
+                    <p key={i} className="text-lg leading-relaxed text-white/80 font-medium text-center">
                       {paragraph.split('\n').map((line, j) => (
                         <span key={j}>
                           {line}

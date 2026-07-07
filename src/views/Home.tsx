@@ -1,75 +1,48 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe2, Sparkles, TrendingUp, Play } from 'lucide-react'
-import {
-  searchSongs,
-  searchAlbums,
-  getHomeQuery,
-  filterFullSongs,
-  preferLanguageSongs,
-} from '../api/saavn'
-import type { Song, Album } from '../types'
-import SongCard from '../components/SongCard'
-import AlbumCard from '../components/AlbumCard'
+import { Globe2, Sparkles, TrendingUp } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
+import { useLanguage } from '../context/LanguageContext'
+
+import { generateHomeFeedThunks, clearRecommendationsCache, type HomeFeedThunk } from '../services/recommendationService'
 import LyricistAlbums from '../components/LyricistAlbums'
 import TamilArtistAlbums from '../components/TamilArtistAlbums'
-import { useAuth } from '../hooks/useAuth'
-import { usePlayer } from '../context/PlayerContext'
-import { useLanguage } from '../context/LanguageContext'
-import { useRecentlyPlayed } from '../hooks/useRecentlyPlayed'
-import { readOfflineCache, writeOfflineCache } from '../utils/offlineCache'
-import { useIsMobile } from '../hooks/useIsMobile'
+import LazySection from '../components/LazySection'
 
 export default function Home() {
-  const isMobile = useIsMobile()
+
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { playSong } = usePlayer()
   const { language, setLanguage, languages } = useLanguage()
-  const { recentlyPlayed, loading: recentLoading } = useRecentlyPlayed(8)
-  const [trending, setTrending] = useState<Song[]>([])
-  const [albums, setAlbums] = useState<Album[]>([])
-  const [loading, setLoading] = useState(true)
-  const [offlineRecommendationsOnly, setOfflineRecommendationsOnly] = useState(false)
+  
+  const [thunks, setThunks] = useState<HomeFeedThunk[]>([])
 
   useEffect(() => {
-    if (isMobile) {
-      setLoading(false)
-      return
+    const fetchFeeds = () => {
+      const feedThunks = generateHomeFeedThunks(user?.id || null, language)
+      setThunks(feedThunks)
     }
 
-    async function load() {
-      setLoading(true)
-      try {
-        const [songsData, albumsData] = await Promise.all([
-          searchSongs(getHomeQuery(language), 1, 30),
-          searchAlbums(language === 'all' ? 'bollywood' : language, 1, 8),
-        ])
-        const fullSongs = filterFullSongs(songsData.results)
-        const filtered = preferLanguageSongs(fullSongs, language).slice(0, 12)
-        setTrending(filtered)
-        setAlbums(albumsData.results)
-        writeOfflineCache(`hearttune-home:${language}`, {
-          trending: filtered,
-          albums: albumsData.results,
-        })
-        setOfflineRecommendationsOnly(false)
-      } catch {
-        const cached = readOfflineCache<{ trending: Song[]; albums: Album[] }>(
-          `hearttune-home:${language}`,
-          { trending: [], albums: [] }
-        )
-        setTrending(cached.trending)
-        setAlbums(cached.albums)
-        setOfflineRecommendationsOnly(cached.trending.length === 0 && cached.albums.length === 0)
-      } finally {
-        setLoading(false)
+    fetchFeeds()
+
+    const handleUpdate = () => {
+      // Clear Redis cache so new data is fetched
+      if (user?.id) {
+        clearRecommendationsCache(user.id)
       }
+      // Small debounce to prevent multiple rapid refreshes
+      setTimeout(fetchFeeds, 1000)
     }
 
-    void load()
-  }, [isMobile, language])
+    window.addEventListener('hearttune:recently-played-updated', handleUpdate)
+    window.addEventListener('hearttune:recommendations-invalidate', handleUpdate)
+
+    return () => {
+      window.removeEventListener('hearttune:recently-played-updated', handleUpdate)
+      window.removeEventListener('hearttune:recommendations-invalidate', handleUpdate)
+    }
+  }, [language, user?.id])
 
   const hour = new Date().getHours()
   const greeting =
@@ -77,55 +50,9 @@ export default function Home() {
   const firstName = user?.name?.split(' ')[0]
   const greetingLine = firstName ? `${greeting}, ${firstName}` : greeting
 
-  if (isMobile) {
-    return (
-      <div className="page home-page mobile-language-page">
-        <motion.header
-          className="page-header mobile-language-header"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div>
-            <h1>
-              {greetingLine}{' '}
-              <span role="img" aria-label="waving hand">
-                {'\u{1F44B}'}
-              </span>
-            </h1>
-            <p>Discover music that moves your heart</p>
-          </div>
-        </motion.header>
-
-        <div className="mobile-language-list">
-          {languages.map((item, i) => (
-            <motion.button
-              key={item.id}
-              type="button"
-              className={`mobile-language-card ${language === item.id ? 'active' : ''}`}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              onClick={() => {
-                setLanguage(item.id)
-                navigate('/top-picks')
-              }}
-            >
-              <span className="mobile-language-icon">
-                {i === 0 ? <Globe2 size={22} /> : i % 2 === 0 ? <Sparkles size={22} /> : <TrendingUp size={22} />}
-              </span>
-              <span className="mobile-language-copy">
-                <strong>{item.label}</strong>
-                <small>{item.id === 'all' ? 'Browse every language' : `Play ${item.label} favorites`}</small>
-              </span>
-            </motion.button>
-          ))}
-        </div>
-      </div>
-    )
-  }
 
   return (
-    <div className="page home-page">
+    <div className="page home-page pb-20">
       <motion.header
         className="page-header hero-header"
         initial={{ opacity: 0, y: -20 }}
@@ -142,7 +69,7 @@ export default function Home() {
         </div>
       </motion.header>
 
-      <section className="quick-picks">
+      <section className="quick-picks mb-8">
         {languages.map((l, i) => (
           <motion.div
             key={l.id}
@@ -172,95 +99,22 @@ export default function Home() {
         ))}
       </section>
 
-      {loading ? (
-        <div className="loading-grid">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="skeleton-card" />
-          ))}
-        </div>
-      ) : (
-        <>
-          {user ? (
-            <section className="section">
-              <div className="section-header">
-                <h2>
-                  <Play size={22} /> Recently Played
-                </h2>
-              </div>
-              {recentLoading ? (
-                <div className="loading-grid">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="skeleton-card" />
-                  ))}
-                </div>
-              ) : recentlyPlayed.length === 0 ? (
-                <p className="lyricist-subtitle">Songs you play will appear here.</p>
-              ) : (
-                <div className="song-grid">
-                  {recentlyPlayed.map((entry, i) => (
-                    <SongCard
-                      key={entry.id}
-                      song={entry.song}
-                      queue={recentlyPlayed.map((item) => item.song)}
-                      index={i}
-                      eager={i === 0}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          ) : null}
+      <div className="flex flex-col gap-2">
+        {thunks.map((thunk, i) => (
+          <motion.div 
+            key={`section-${i}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+          >
+            <LazySection thunk={thunk} />
+          </motion.div>
+        ))}
 
-          <section className="section">
-            <div className="section-header">
-              <h2>
-                <TrendingUp size={22} /> Top Picks
-              </h2>
-              {trending.length > 0 && (
-                <button className="play-all-btn" onClick={() => playSong(trending[0], trending)}>
-                  <Play size={16} fill="currentColor" /> Play All
-                </button>
-              )}
-            </div>
-            {trending.length > 0 ? (
-              <div className="song-grid">
-                {trending.map((song, i) => (
-                  <SongCard
-                    key={song.id}
-                    song={song}
-                    queue={trending}
-                    index={i}
-                    eager={i === 0 && (!user || recentlyPlayed.length === 0)}
-                  />
-                ))}
-              </div>
-            ) : offlineRecommendationsOnly ? (
-              <p className="lyricist-subtitle">Connect once online to refresh your top picks.</p>
-            ) : null}
-          </section>
-
-          {language === 'tamil' ? <TamilArtistAlbums /> : null}
-
-          <section className="section">
-            <div className="section-header">
-              <h2>
-                <Sparkles size={22} /> Popular Albums
-              </h2>
-            </div>
-            {albums.length > 0 ? (
-              <div className="album-grid">
-                {albums.map((album, i) => (
-                  <AlbumCard key={album.id} album={album} index={i} />
-                ))}
-              </div>
-            ) : offlineRecommendationsOnly ? (
-              <p className="lyricist-subtitle">Popular albums will appear here after the next online refresh.</p>
-            ) : null}
-          </section>
-
-          <LyricistAlbums language={language} />
-        </>
-      )}
+        {/* Preserve original language-specific album blocks */}
+        {language === 'tamil' ? <TamilArtistAlbums /> : null}
+        <LyricistAlbums language={language} />
+      </div>
     </div>
   )
 }

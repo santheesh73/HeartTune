@@ -1,4 +1,4 @@
-import type { Album, Playlist, Song } from '../types'
+import type { Album, Playlist, Song, ArtistDetail } from '../types'
 import { secureJsonFetch } from '../lib/apiClient'
 import { auditLog, captureAppError } from '../lib/monitoring'
 
@@ -278,7 +278,7 @@ export function getLyricistsForLanguage(language: string) {
 
 
 export async function getArtist(id: string) {
-  const data = await fetchApi<any>(`/artists?id=${id}`)
+  const data = await fetchApi<ArtistDetail>(`/artists?id=${id}`)
   return data
 }
 

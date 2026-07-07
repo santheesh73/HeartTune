@@ -2,6 +2,7 @@ import type {
   PlaylistRow,
   ProfileRow,
   RecentlyPlayedRow,
+  SearchHistoryRow,
 } from './database'
 
 export interface ImageQuality {
@@ -14,6 +15,23 @@ export interface Artist {
   name: string
   role?: string
   image?: ImageQuality[]
+}
+
+export interface ArtistDetail extends Artist {
+  followerCount?: number
+  fanCount?: string
+  isVerified?: boolean
+  dominantLanguage?: string
+  dominantType?: string
+  bio?: { text: string; title: string; sequence: number }[]
+  dob?: string
+  fb?: string
+  twitter?: string
+  wiki?: string
+  topSongs?: Song[]
+  topAlbums?: Album[]
+  singles?: Album[]
+  similarArtists?: Artist[]
 }
 
 export interface AlbumRef {
@@ -79,6 +97,10 @@ export interface UserPlaylist extends PlaylistRow {
 
 export interface RecentlyPlayedEntry extends RecentlyPlayedRow {
   played_at: string
+}
+
+export interface SearchHistoryEntry extends SearchHistoryRow {
+  created_at: string
 }
 
 export interface DownloadMetadata {

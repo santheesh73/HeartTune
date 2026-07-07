@@ -65,15 +65,22 @@ export default function TamilArtistAlbums() {
       <p className="lyricist-subtitle">Albums and playlists featuring {selected.name}</p>
 
       {loading ? (
-        <div className="album-grid">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="skeleton-card" />
+        <div className="flex overflow-x-auto gap-4 sm:gap-6 px-4 sm:px-6 pb-6 pt-2 hide-scrollbar">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+              <div className="skeleton-card w-full aspect-square rounded-xl" />
+            </div>
           ))}
         </div>
       ) : albums.length ? (
-        <div className="album-grid">
+        <div 
+          className="flex overflow-x-auto gap-4 sm:gap-6 px-4 sm:px-6 pb-6 pt-2 snap-x snap-mandatory hide-scrollbar"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {albums.map((album, index) => (
-            <AlbumCard key={album.id} album={album} index={index} />
+            <div key={album.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+              <AlbumCard album={album} index={index} />
+            </div>
           ))}
         </div>
       ) : offlineOnly ? (

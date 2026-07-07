@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Play, Pause, Heart, Download, Loader2, Trash2, ListPlus } from 'lucide-react'
+import { Heart, Download, Loader2, Trash2, Plus, ListStart, ListEnd, ListPlus, Play, Pause } from 'lucide-react'
 import { getArtistNames } from '../api/saavn'
 import { formatDuration } from '../utils/format'
 import type { Song } from '../types'
 import { usePlayer } from '../context/PlayerContext'
 import { useLibrary } from '../context/LibraryContext'
 import SongArtwork from './SongArtwork'
+import AddToPlaylistModal from './AddToPlaylistModal'
 
 interface SongRowProps {
   song: Song
@@ -39,11 +40,12 @@ export default function SongRow({
   onRemove,
   onDownloadComplete,
 }: SongRowProps) {
-  const { playSong, addToQueue, currentSong, isPlaying, togglePlay } = usePlayer()
+  const { playSong, addToQueue, playSongNext, playSongLater, currentSong, isPlaying, togglePlay } = usePlayer()
   const { isLiked, toggleLike, isDownloaded, downloadSong, downloadingIds, removeDownloaded } =
     useLibrary()
   const [swipeEnabled, setSwipeEnabled] = useState(false)
   const [queueMessage, setQueueMessage] = useState('')
+  const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] = useState(false)
   const queueMessageTimerRef = useRef<number | null>(null)
 
   const isCurrent = currentSong?.id === song.id
@@ -96,6 +98,18 @@ export default function SongRow({
     showQueueMessage(queued ? 'Added to queue' : 'Already in queue')
   }
 
+  const handlePlayNext = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    playSongNext(song)
+    showQueueMessage('Playing Next')
+  }
+
+  const handlePlayLater = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    playSongLater(song)
+    showQueueMessage('Added to Queue')
+  }
+
   const handleDownload = async () => {
     await downloadSong(song)
     onDownloadComplete?.()
@@ -127,11 +141,21 @@ export default function SongRow({
 
       <span className="song-row-index">
         {isCurrent && isPlaying ? (
-          <div className="equalizer">
-            <span /><span /><span />
-          </div>
+          <>
+            <div className="equalizer index-number">
+              <span /><span /><span />
+            </div>
+            <button className="play-icon-btn" onClick={handlePlay} aria-label="Pause song">
+              <Pause size={16} fill="currentColor" />
+            </button>
+          </>
         ) : (
-          index + 1
+          <>
+            <span className="index-number">{index + 1}</span>
+            <button className="play-icon-btn" onClick={handlePlay} aria-label="Play song">
+              <Play size={16} fill="currentColor" />
+            </button>
+          </>
         )}
       </span>
 
@@ -196,20 +220,44 @@ export default function SongRow({
       {showActions && (
         <div className="song-row-actions">
           {!compactDesktopActions || showCompactQueue ? (
-            <button
-              className="icon-btn"
-              onClick={handleQueueGesture}
-              title="Add to queue"
-              aria-label={`Add ${song.name} to queue`}
-            >
-              <ListPlus size={18} />
-            </button>
+            <>
+              <button
+                className="icon-btn"
+                onClick={handlePlayNext}
+                title="Play Next"
+                aria-label={`Play ${song.name} next`}
+              >
+                <ListStart size={18} />
+              </button>
+              <button
+                className="icon-btn"
+                onClick={handlePlayLater}
+                title="Play Later"
+                aria-label={`Play ${song.name} later`}
+              >
+                <ListEnd size={18} />
+              </button>
+              <button
+                className="icon-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsAddToPlaylistModalOpen(true)
+                }}
+                title="Add to playlist"
+                aria-label={`Add ${song.name} to playlist`}
+              >
+                <Plus size={18} />
+              </button>
+            </>
           ) : null}
 
           {compactDesktopActions ? null : (
             <button
               className={`icon-btn ${liked ? 'liked' : ''}`}
-              onClick={() => void toggleLike(song)}
+              onClick={(e) => {
+                e.stopPropagation()
+                void toggleLike(song)
+              }}
               title={liked ? 'Remove from liked' : 'Like'}
             >
               <Heart size={18} fill={liked ? 'currentColor' : 'none'} />
@@ -249,11 +297,15 @@ export default function SongRow({
               )}
             </button>
           )}
-
-          <button className="icon-btn play-btn" onClick={handlePlay}>
-            {isCurrent && isPlaying ? <Pause size={18} /> : <Play size={18} />}
-          </button>
         </div>
+      )}
+
+      {isAddToPlaylistModalOpen && (
+        <AddToPlaylistModal
+          isOpen={isAddToPlaylistModalOpen}
+          onClose={() => setIsAddToPlaylistModalOpen(false)}
+          song={song}
+        />
       )}
     </motion.div>
   )

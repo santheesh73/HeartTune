@@ -149,6 +149,52 @@ export async function addSongToPlaylist(playlistId: string, userId: string, song
   return true
 }
 
+export async function addSongsToPlaylist(playlistId: string, userId: string, songs: Song[]) {
+  if (!songs.length) return false
+  
+  const client = requireSupabase(supabase)
+  
+  // 1. Get existing songs to avoid duplicates
+  const { data: existingSongs, error: existingError } = await client
+    .from('playlist_songs')
+    .select('song_id')
+    .eq('playlist_id', playlistId)
+    
+  assertNoSupabaseError(existingError, 'Unable to inspect playlist songs')
+  const existingSongIds = new Set(existingSongs?.map(s => s.song_id) || [])
+  
+  // Filter out songs already in the playlist
+  const newSongs = songs.filter(s => !existingSongIds.has(s.id))
+  if (newSongs.length === 0) return false
+
+  // 2. Get current max position
+  const { count: totalSongs, error: totalError } = await client
+    .from('playlist_songs')
+    .select('id', { count: 'exact', head: true })
+    .eq('playlist_id', playlistId)
+
+  assertNoSupabaseError(totalError, 'Unable to calculate playlist position')
+  const startPosition = totalSongs || 0
+
+  // 3. Build records array
+  const recordsToInsert = newSongs.map((song, index) => {
+    const record = buildSongRecord(song)
+    return {
+      playlist_id: playlistId,
+      user_id: userId,
+      ...record,
+      position: startPosition + index,
+    }
+  })
+
+  // 4. Batch insert
+  const { error } = await client.from('playlist_songs').insert(recordsToInsert)
+
+  assertNoSupabaseError(error, 'Unable to add songs to playlist')
+  await auditLog('playlist_modification', { action: 'add_songs_batch', playlistId, count: newSongs.length })
+  return true
+}
+
 export async function removeSongFromPlaylist(playlistId: string, songId: string) {
   const client = requireSupabase(supabase)
   const { error } = await client

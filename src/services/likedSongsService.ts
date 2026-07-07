@@ -48,6 +48,11 @@ export async function likeSong(userId: string, song: Song) {
     .single()
 
   assertNoSupabaseError(error, 'Unable to like song')
+  
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hearttune:recommendations-invalidate'))
+  }
+  
   return data
 }
 
@@ -60,6 +65,10 @@ export async function unlikeSong(userId: string, songId: string) {
     .eq('song_id', songId)
 
   assertNoSupabaseError(error, 'Unable to unlike song')
+  
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('hearttune:recommendations-invalidate'))
+  }
 }
 
 export async function getLikedSongs(userId: string) {

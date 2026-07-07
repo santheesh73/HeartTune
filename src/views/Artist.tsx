@@ -1,56 +1,109 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Play, Shuffle, UserPlus } from 'lucide-react'
+import { Play, Shuffle, Heart, Share2, BadgeCheck, Users, Info } from 'lucide-react'
 import { getArtist, getArtistSongs, getArtistAlbums } from '../api/saavn'
+import type { ArtistDetail, Song, Album } from '../types'
 import { usePlayer } from '../context/PlayerContext'
-import type { Song, Album } from '../types'
 import SongRow from '../components/SongRow'
 import AlbumCard from '../components/AlbumCard'
+import { getArtworkCandidates } from '../lib/utils/artwork'
 
 export default function ArtistPage() {
   const { id } = useParams<{ id: string }>()
+  const [artist, setArtist] = useState<ArtistDetail | null>(null)
+  const [topSongs, setTopSongs] = useState<Song[]>([])
+  const [albums, setAlbums] = useState<Album[]>([])
+  const [singles, setSingles] = useState<Album[]>([])
+  const [loading, setLoading] = useState(true)
+  const [scrollY, setScrollY] = useState(0)
+  
   const { playSong } = usePlayer()
 
-  const [artist, setArtist] = useState<any>(null)
-  const [songs, setSongs] = useState<Song[]>([])
-  const [albums, setAlbums] = useState<Album[]>([])
-  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    const mainContent = document.querySelector('.main-content')
+    if (!mainContent) return
+    const handleScroll = () => {
+      setScrollY(mainContent.scrollTop)
+    }
+    mainContent.addEventListener('scroll', handleScroll)
+    return () => mainContent.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     if (!id) return
-    let mounted = true
     setLoading(true)
-
+    
     Promise.all([
-      getArtist(id),
-      getArtistSongs(id, 1, 10),
-      getArtistAlbums(id, 1, 10)
+      getArtist(id).catch(() => null),
+      getArtistSongs(id, 1, 10).catch(() => ({ songs: [] })),
+      getArtistAlbums(id, 1, 12).catch(() => ({ albums: [] }))
     ]).then(([artistData, songsData, albumsData]) => {
-      if (!mounted) return
-      setArtist(artistData)
-      setSongs(songsData?.songs || [])
-      setAlbums(albumsData?.albums || [])
-    }).catch(console.error)
-      .finally(() => mounted && setLoading(false))
-
-    return () => { mounted = false }
+      setArtist(artistData || null)
+      setTopSongs(artistData?.topSongs || songsData?.songs || [])
+      
+      const allAlbums = artistData?.topAlbums || albumsData?.albums || []
+      const allSingles = artistData?.singles || []
+      
+      setAlbums(allAlbums)
+      setSingles(allSingles)
+      
+      setLoading(false)
+    })
   }, [id])
 
   if (loading) {
     return (
-      <div className="page">
-        <div className="skeleton-hero" />
-        <div className="loading-list">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="skeleton-row" />
-          ))}
+      <div className="page artist-page">
+        {/* Premium Skeleton: Artist Banner */}
+        <div className="artist-hero skeleton-hero" style={{ height: '340px' }}>
+          <div className="artist-hero-content" style={{ justifyContent: 'flex-end', height: '100%', paddingBottom: '32px' }}>
+            <div className="skeleton-text" style={{ width: '96px', height: '24px', borderRadius: '24px', marginBottom: '16px', background: 'rgba(255,255,255,0.2)' }} />
+            <div className="skeleton-text" style={{ width: '75%', maxWidth: '600px', height: '72px', borderRadius: '8px', marginBottom: '16px', background: 'rgba(255,255,255,0.2)' }} />
+            
+            {/* Premium Skeletons: Stats Placeholders */}
+            <div className="flex" style={{ gap: '16px', marginTop: '8px' }}>
+              <div className="skeleton-text skeleton-stat" style={{ width: '128px' }} />
+              <div className="skeleton-text skeleton-stat" style={{ width: '96px' }} />
+            </div>
+          </div>
+        </div>
+
+        <div className="album-actions" style={{ marginBottom: '32px', marginTop: '24px', display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <div className="skeleton-img" style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+          <div className="skeleton-img" style={{ width: '96px', height: '40px', borderRadius: '24px', background: 'rgba(255,255,255,0.1)' }} />
+          <div className="skeleton-img" style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+          <div className="skeleton-img" style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+        </div>
+
+        <div className="artist-page-grid">
+          <div>
+            <h2 className="section-title" style={{ marginBottom: '16px' }}>Popular</h2>
+            <div className="loading-list">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton-row" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', height: '64px' }} />
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            {/* Premium Skeleton: Biography placeholder */}
+            <h2 className="section-title" style={{ marginBottom: '16px' }}>About</h2>
+            <div className="skeleton-bio">
+              <div className="skeleton-bio-title" />
+              <div className="skeleton-bio-line" style={{ width: '100%' }} />
+              <div className="skeleton-bio-line" style={{ width: '83%' }} />
+              <div className="skeleton-bio-line" style={{ width: '80%' }} />
+              <div className="skeleton-bio-line" style={{ width: '100%', marginTop: '16px' }} />
+              <div className="skeleton-bio-line" style={{ width: '66%' }} />
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
-  if (!artist && !songs.length) {
+  if (!artist) {
     return (
       <div className="page">
         <div className="empty-state">
@@ -61,86 +114,230 @@ export default function ArtistPage() {
   }
 
   const shufflePlay = () => {
-    if (!songs.length) return
-    const shuffled = [...songs].sort(() => Math.random() - 0.5)
+    if (!topSongs.length) return
+    const shuffled = [...topSongs].sort(() => Math.random() - 0.5)
     playSong(shuffled[0], shuffled)
   }
 
-  const imageUrl = artist?.image?.[artist.image.length - 1]?.url || ''
+  const formatNumber = (num?: number | string) => {
+    if (!num) return '0'
+    return Number(num).toLocaleString()
+  }
+
+  const bgImage = getArtworkCandidates(artist.image, '500x500')[0] || ''
+  
+  // Fallback calculations
+  const hasStats = artist.fanCount || artist.followerCount;
 
   return (
-    <div className="page album-page">
-      <motion.div
-        className="album-hero"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+    <div className="page artist-page">
+      <div 
+        className="artist-sticky-header"
+        style={{
+          opacity: scrollY > 280 ? 1 : 0,
+          pointerEvents: scrollY > 280 ? 'auto' : 'none',
+        }}
       >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={artist?.name || 'Artist'}
-            className="w-48 h-48 rounded-full object-cover shadow-2xl"
+        <div className="sticky-header-content">
+          <button 
+            className="play-btn-small transition-transform duration-200"
+            onClick={() => topSongs.length && playSong(topSongs[0], topSongs)}
+            aria-label="Play top song"
+          >
+            <Play size={20} fill="currentColor" />
+          </button>
+          <h2>{artist.name}</h2>
+        </div>
+      </div>
+
+      <motion.div
+        className="artist-hero"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      >
+        {bgImage && (
+          <div 
+            className="artist-hero-bg" 
+            style={{ backgroundImage: `url(${bgImage})` }} 
           />
-        ) : (
-          <div className="w-48 h-48 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl">
-            <span className="text-white/30 text-5xl font-bold">{(artist?.name || 'A').charAt(0)}</span>
-          </div>
         )}
+        <div className="artist-hero-overlay" />
         
-        <div className="flex-1">
-          <p className="playlist-type">Artist</p>
-          <h1 className="text-6xl font-bold mb-4">{artist?.name || 'Unknown Artist'}</h1>
-          <p className="playlist-meta text-white/70 mb-4">{artist?.followerCount ? `${artist.followerCount.toLocaleString()} followers` : ''}</p>
+        <div className="artist-hero-content">
+          {artist.isVerified && (
+            <div className="artist-badge">
+              <BadgeCheck size={16} fill="currentColor" className="text-blue-400" />
+              <span>Verified Artist</span>
+            </div>
+          )}
+          <h1 className="drop-shadow-lg">{artist.name}</h1>
+          
+          <div className="artist-stats">
+            {hasStats ? (
+              <>
+                {artist.fanCount && (
+                  <span>
+                    <Users size={16} className="text-white/70" />
+                    {formatNumber(artist.fanCount)} monthly listeners
+                  </span>
+                )}
+                {artist.followerCount && (
+                  <span>
+                    <Heart size={16} className="text-white/70" />
+                    {formatNumber(artist.followerCount)} followers
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="artist-stats-fallback">
+                <Info size={16} />
+                Stats unavailable
+              </span>
+            )}
+          </div>
         </div>
       </motion.div>
 
-      <div className="flex items-center gap-4 mb-8">
+      <div className="album-actions mb-10 flex items-center gap-4">
         <motion.button
-          className="play-all-btn large"
-          onClick={() => songs.length && playSong(songs[0], songs)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          disabled={!songs.length}
+          className="play-btn-large"
+          onClick={() => topSongs.length && playSong(topSongs[0], topSongs)}
+          title="Play"
+          aria-label="Play all"
         >
-          <Play size={20} fill="currentColor" /> Play
+          <Play size={24} fill="currentColor" className="ml-1" />
         </motion.button>
-        <button className="shuffle-btn" onClick={shufflePlay} disabled={!songs.length}>
-          <Shuffle size={20} /> Shuffle
+        
+        <button 
+          className="shuffle-btn flex gap-2 items-center px-6 py-2 rounded-full border border-white/20"
+          onClick={shufflePlay}
+          aria-label="Shuffle play"
+        >
+          <Shuffle size={18} /> Shuffle
         </button>
-        <button className="p-2 ml-4 rounded-full border border-white/20 text-white hover:border-white transition flex items-center gap-2 px-4 py-2">
-          <UserPlus size={18} />
-          <span className="font-semibold text-sm">Follow</span>
+        
+        <button
+          className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/80"
+          title="Follow"
+          aria-label="Follow artist"
+        >
+          <Heart size={20} />
+        </button>
+        
+        <button
+          className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/80"
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href)
+            window.alert('Link copied to clipboard!')
+          }}
+          title="Share"
+          aria-label="Share artist"
+        >
+          <Share2 size={20} />
         </button>
       </div>
 
-      {songs.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Popular Songs</h2>
-          <div className="song-list">
-            <div className="song-list-header">
-              <span>#</span>
-              <span>Title</span>
-              <span>Album</span>
-              <span>Duration</span>
-              <span />
-            </div>
-            {songs.map((song, i) => (
-              <SongRow key={song.id} song={song} index={i} queue={songs} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {albums.length > 0 && (
+      <div className="artist-page-grid">
         <div>
-          <h2 className="text-2xl font-bold mb-6">Albums</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            {albums.map((album) => (
-              <AlbumCard key={album.id} album={album} />
-            ))}
-          </div>
+          {topSongs.length > 0 && (
+            <section style={{ marginBottom: '40px' }}>
+              <h2 className="section-title">Popular</h2>
+              <div className="song-list" style={{ marginTop: '16px' }}>
+                {topSongs.map((song, i) => (
+                  <SongRow 
+                    key={song.id} 
+                    song={song} 
+                    index={i} 
+                    queue={topSongs} 
+                    hideDesktopRemove 
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {albums.length > 0 && (
+            <section style={{ marginBottom: '40px' }}>
+              <h2 className="section-title">Albums</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                {albums.map((album, i) => (
+                  <AlbumCard key={album.id} album={album} index={i} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {singles.length > 0 && (
+            <section style={{ marginBottom: '40px' }}>
+              <h2 className="section-title">Singles & EPs</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                {singles.map((single, i) => (
+                  <AlbumCard key={single.id} album={single} index={i} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
-      )}
+
+        <div>
+          <section style={{ marginBottom: '40px' }}>
+            <h2 className="section-title">About</h2>
+            {artist.bio && artist.bio.length > 0 ? (
+              <div className="bio-card" style={{ marginTop: '16px' }}>
+                {artist.bio.map((b, idx) => (
+                  <div key={idx} style={{ marginBottom: '16px' }}>
+                    {b.title && <h3>{b.title}</h3>}
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+                      {b.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bio-fallback" style={{ marginTop: '16px' }}>
+                <Info size={32} />
+                <h3>Biography not available</h3>
+                <p>We don't have a biography for {artist.name} yet.</p>
+              </div>
+            )}
+          </section>
+
+          {artist.similarArtists && artist.similarArtists.length > 0 ? (
+            <section style={{ marginBottom: '40px' }}>
+              <h2 className="section-title">Similar Artists</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
+                {artist.similarArtists.map((similar, i) => (
+                  <div key={similar.id || i} className="similar-artist-card" style={{ cursor: 'pointer' }}>
+                    <div className="similar-artist-img-wrapper" style={{ overflow: 'hidden', borderRadius: '50%', marginBottom: '12px', aspectRatio: '1/1' }}>
+                      <img 
+                        src={getArtworkCandidates(similar.image, '150x150')[0] || ''} 
+                        alt={similar.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
+                        onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                        onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      />
+                    </div>
+                    <p className="similar-artist-name" style={{ textAlign: 'center', fontSize: '0.875rem', fontWeight: 500 }}>{similar.name}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <section style={{ marginBottom: '40px' }}>
+              <h2 className="section-title">Similar Artists</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="similar-artist-card">
+                    <div className="similar-artist-img-wrapper skeleton-img" style={{ marginBottom: '12px' }} />
+                    <div className="skeleton-text" style={{ marginTop: '12px', height: '16px', width: '75%', margin: '0 auto', borderRadius: '4px' }} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
