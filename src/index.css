@@ -1713,12 +1713,21 @@ input {
 
 .lyricist-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 10px;
   margin-bottom: 12px;
+  padding-bottom: 4px; /* Slight padding for smooth scrolling */
+  scrollbar-width: none; /* Firefox */
+}
+
+.lyricist-chips::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
 }
 
 .lyricist-chip {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 8px 18px;
   border-radius: 50px;
   background: var(--bg-elevated);
@@ -4807,3 +4816,9 @@ input {
 .play-btn-large:active { transform: scale(0.95); }
 .artist-page-grid { display: grid; grid-template-columns: 1fr; gap: 32px; }
 @media (min-width: 1024px) { .artist-page-grid { grid-template-columns: 2fr 1fr; } }
+
+@media (max-width: 640px) {
+  .section-header h2 {
+    font-size: 1rem;
+  }
+}

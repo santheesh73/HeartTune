@@ -6,6 +6,7 @@ import { PlayerProvider } from './context/PlayerContext'
 import { LibraryProvider } from './context/LibraryContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Layout from './components/Layout'
 import Login from './views/Login'
 import Home from './views/Home'
@@ -127,9 +128,21 @@ function AppRoutes() {
   )
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
           <LanguageProvider>
@@ -142,5 +155,6 @@ export default function App() {
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
+  </QueryClientProvider>
   )
 }

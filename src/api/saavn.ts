@@ -380,6 +380,10 @@ export async function getSongs(ids: string[]) {
 
 /** Fetch full song metadata + stream URLs before playback. */
 export async function resolvePlayableSong(song: Song): Promise<Song> {
+  if (song.downloadUrl && song.downloadUrl.length > 0 && getBestAudioUrl(song)) {
+    return song
+  }
+
   try {
     const full = await getSong(song.id)
     if (!full) return song

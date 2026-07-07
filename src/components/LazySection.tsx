@@ -1,44 +1,28 @@
-import { useEffect, useState } from 'react'
 import { useInView } from 'react-intersection-observer'
-import type { HomeSection, HomeFeedThunk } from '../services/recommendationService'
+import type { HomeFeedConfig } from '../services/recommendationService'
 import SectionSlider from './SectionSlider'
+import { useHomeSection } from '../hooks/useHomeSection'
 
 interface LazySectionProps {
-  thunk: HomeFeedThunk
+  config: HomeFeedConfig
+  eager?: boolean
 }
 
-export default function LazySection({ thunk }: LazySectionProps) {
+export default function LazySection({ config, eager = false }: LazySectionProps) {
   const { ref, inView } = useInView({
     triggerOnce: true,
     rootMargin: '200px 0px', // Load before it comes into view
   })
 
-  const [section, setSection] = useState<HomeSection | null>(null)
-  const [loading, setLoading] = useState(true)
+  // We only enable the background query if the section is eager OR has come into view.
+  // Note: if there is offline cache, initialData will synchronously populate `data`, 
+  // ensuring the section renders instantly without a skeleton, while the network request
+  // waits until `enabled` is true to revalidate.
+  const { data: section, isLoading } = useHomeSection(config, eager || inView)
 
-  useEffect(() => {
-    if (inView && loading) {
-      let isMounted = true
-      thunk()
-        .then((data) => {
-          if (isMounted) {
-            setSection(data)
-            setLoading(false)
-          }
-        })
-        .catch(() => {
-          if (isMounted) {
-            setSection(null)
-            setLoading(false)
-          }
-        })
-      return () => {
-        isMounted = false
-      }
-    }
-  }, [inView, loading, thunk])
-
-  if (loading) {
+  // Only show skeleton if we have NO data AND it's still loading the initial fetch.
+  // If we have stale data, it renders immediately (SWR).
+  if (isLoading && !section) {
     return (
       <div ref={ref} className="space-y-4 px-4 sm:px-6 mt-8 mb-4">
         <div className="h-8 w-48 bg-white/10 rounded animate-pulse mb-2"></div>
@@ -51,11 +35,12 @@ export default function LazySection({ thunk }: LazySectionProps) {
     )
   }
 
-  if (!section) return null
+  if (!section) return <div ref={ref} /> // Empty div so intersection observer still has a target if data is null
 
   return (
     <div ref={ref}>
-      <SectionSlider section={section} />
+      <SectionSlider section={section} eager={eager} />
     </div>
   )
 }
+

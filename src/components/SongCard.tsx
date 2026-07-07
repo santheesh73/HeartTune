@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ListPlus, Play, ListMusic } from 'lucide-react'
+import { ListPlus, Play, ListMusic, MoreVertical } from 'lucide-react'
 import { getArtistNames } from '../api/saavn'
 import type { Song } from '../types'
 import { usePlayer } from '../context/PlayerContext'
@@ -18,6 +18,7 @@ export default function SongCard({ song, queue, index = 0, eager = false }: Song
   const { playSong, addToQueue, currentSong, isPlaying } = usePlayer()
   const [queueMessage, setQueueMessage] = useState('')
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const isCurrent = currentSong?.id === song.id
 
   const handleAddToQueue = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -29,11 +30,15 @@ export default function SongCard({ song, queue, index = 0, eager = false }: Song
   return (
     <motion.div
       className="song-card"
+      style={{ zIndex: isMenuOpen ? 50 : 1, position: 'relative' }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index, 6) * 0.03 }}
       whileHover={{ y: -6 }}
-      onClick={() => playSong(song, queue || [song])}
+      onClick={() => {
+        if (isMenuOpen) setIsMenuOpen(false)
+        else playSong(song, queue || [song])
+      }}
     >
       <div className="song-card-image-wrap">
         <SongArtwork
@@ -43,28 +48,6 @@ export default function SongCard({ song, queue, index = 0, eager = false }: Song
           size="500x500"
           loading={eager ? 'eager' : 'lazy'}
         />
-        <motion.button
-          className={`queue-overlay ${queueMessage ? 'visible' : ''}`}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleAddToQueue}
-          title={queueMessage || 'Add to queue'}
-        >
-          <ListPlus size={20} />
-        </motion.button>
-        <motion.button
-          className="playlist-overlay"
-          style={{ position: 'absolute', top: '8px', right: '40px', zIndex: 10, background: 'rgba(0,0,0,0.5)', padding: '6px', borderRadius: '50%', color: 'white', opacity: 0 }}
-          whileHover={{ scale: 1.08, opacity: 1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={(e) => {
-            e.stopPropagation()
-            setIsPlaylistModalOpen(true)
-          }}
-          title="Add to playlist"
-        >
-          <ListMusic size={20} />
-        </motion.button>
         <motion.button
           className={`play-overlay ${isCurrent && isPlaying ? 'playing' : ''}`}
           whileHover={{ scale: 1.1 }}
@@ -77,8 +60,101 @@ export default function SongCard({ song, queue, index = 0, eager = false }: Song
           <Play size={24} fill="currentColor" />
         </motion.button>
       </div>
-      <h3 className="song-card-title">{song.name}</h3>
-      <p className="song-card-artist">{queueMessage || getArtistNames(song)}</p>
+      
+      <div className="flex justify-between items-start mt-2 relative">
+        <div className="flex-1 overflow-hidden pr-2">
+          <h3 className="song-card-title truncate" title={song.name}>{song.name}</h3>
+          <p className="song-card-artist truncate" title={getArtistNames(song)}>{queueMessage || getArtistNames(song)}</p>
+        </div>
+        
+        <div className="relative">
+          <button 
+            className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsMenuOpen(!isMenuOpen)
+            }}
+          >
+            <MoreVertical size={16} />
+          </button>
+          
+          {isMenuOpen && (
+            <div 
+              style={{
+                position: 'absolute',
+                left: '100%',
+                bottom: '0',
+                marginLeft: '8px',
+                width: '180px',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.8)',
+                zIndex: 9999,
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '8px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 14px',
+                  width: '100%',
+                  textAlign: 'left',
+                  fontSize: '0.95rem',
+                  color: 'var(--text-primary)',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  transition: 'background 0.2s',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  border: 'none'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsMenuOpen(false)
+                  handleAddToQueue(e)
+                }}
+              >
+                <ListPlus size={18} /> Add to queue
+              </button>
+              <button 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 14px',
+                  width: '100%',
+                  textAlign: 'left',
+                  fontSize: '0.95rem',
+                  color: 'var(--text-primary)',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  transition: 'background 0.2s',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  border: 'none'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsMenuOpen(false)
+                  setIsPlaylistModalOpen(true)
+                }}
+              >
+                <ListMusic size={18} /> Add to playlist
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {isPlaylistModalOpen && (
         <AddToPlaylistModal

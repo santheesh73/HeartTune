@@ -3,11 +3,6 @@ import { motion } from 'framer-motion'
 import { Camera, LogOut, PencilLine, User2, Settings as SettingsIcon, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useRecentlyPlayed } from '../hooks/useRecentlyPlayed'
-import { getArtistNames } from '../api/saavn'
-import ArtworkImage from '../components/ArtworkImage'
-import { getArtworkUrl } from '../lib/utils/artwork'
-import type { Song } from '../types'
 
 function getEditableAvatarUrl(avatar?: string) {
   if (!avatar || avatar.includes('api.dicebear.com')) return ''
@@ -28,7 +23,6 @@ function isValidAvatarValue(value: string) {
 
 export default function Profile() {
   const { user, logout, updateProfileDetails } = useAuth()
-  const { recentlyPlayed } = useRecentlyPlayed(100) // fetch up to 100 for stats
   const avatarFileInputId = useId()
   const defaultAvatars = useMemo(
     () => ['/avatars/avatar-1.png', '/avatars/avatar-2.png', '/avatars/avatar-3.png', '/avatars/avatar-4.png'],
@@ -111,34 +105,7 @@ export default function Profile() {
     setSaving(false)
   }
 
-  // Compute stats
-  const topStats = useMemo(() => {
-    if (!recentlyPlayed.length) return { topSong: null, topArtist: null, totalPlays: 0 }
-    
-    const songCounts: Record<string, { count: number; song: Song }> = {}
-    const artistCounts: Record<string, { count: number; name: string }> = {}
-    
-    recentlyPlayed.forEach(entry => {
-      const songId = entry.song.id
-      if (!songCounts[songId]) songCounts[songId] = { count: 0, song: entry.song }
-      songCounts[songId].count++
-      
-      const artistName = getArtistNames(entry.song)
-      if (artistName) {
-        if (!artistCounts[artistName]) artistCounts[artistName] = { count: 0, name: artistName }
-        artistCounts[artistName].count++
-      }
-    })
-    
-    const topSong = Object.values(songCounts).sort((a, b) => b.count - a.count)[0]
-    const topArtist = Object.values(artistCounts).sort((a, b) => b.count - a.count)[0]
-    
-    return {
-      topSong,
-      topArtist,
-      totalPlays: recentlyPlayed.length
-    }
-  }, [recentlyPlayed])
+
 
   return (
     <div className="page profile-page">
@@ -151,9 +118,8 @@ export default function Profile() {
         <p>Change your avatar and edit the name shown across the app.</p>
       </motion.header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-32">
+      <div className="pb-32 max-w-3xl">
         <motion.div
-          className="lg:col-span-2"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -271,51 +237,6 @@ export default function Profile() {
         {error ? <p className="avatar-error">{error}</p> : null}
         {!error && success ? <p className="profile-success">{success}</p> : null}
       </form>
-      </motion.div>
-
-      <motion.div
-        className="space-y-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-6 shadow-xl">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <Play size={20} className="text-[var(--color-primary)]" />
-            Top Song
-          </h2>
-          {topStats.topSong ? (
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-md overflow-hidden bg-white/10 flex-shrink-0 shadow-lg">
-                <ArtworkImage src={getArtworkUrl(topStats.topSong.song.image, '150x150')} alt="" className="w-full h-full object-cover" sizes="64px" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-white truncate text-lg">{topStats.topSong.song.name}</h3>
-                <p className="text-white/50 truncate">{getArtistNames(topStats.topSong.song)}</p>
-                <p className="text-xs text-[var(--color-primary)] font-medium mt-1">{topStats.topSong.count} plays recently</p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-white/50 text-sm">Not enough data to determine your top song yet.</p>
-          )}
-        </div>
-
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-6 shadow-xl">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <User2 size={20} className="text-[var(--color-primary)]" />
-            Top Artist
-          </h2>
-          {topStats.topArtist ? (
-            <div className="flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-white truncate text-2xl">{topStats.topArtist.name}</h3>
-                <p className="text-sm text-[var(--color-primary)] font-medium mt-1">{topStats.topArtist.count} plays recently</p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-white/50 text-sm">Not enough data to determine your top artist yet.</p>
-          )}
-        </div>
       </motion.div>
       </div>
     </div>

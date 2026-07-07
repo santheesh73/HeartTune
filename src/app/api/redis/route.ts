@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { key, value, ttlSeconds = 3600 } = body
 
-  if (!key || !value) return NextResponse.json({ error: 'Missing key or value' }, { status: 400 })
+  if (!key || value === undefined) return NextResponse.json({ error: 'Missing key or value' }, { status: 400 })
 
   const redis = getRedis()
   if (!redis) return NextResponse.json({ success: false })

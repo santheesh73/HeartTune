@@ -7,9 +7,10 @@ import { usePlayer } from '../context/PlayerContext'
 
 interface SectionSliderProps {
   section: HomeSection
+  eager?: boolean
 }
 
-export default function SectionSlider({ section }: SectionSliderProps) {
+export default function SectionSlider({ section, eager = false }: SectionSliderProps) {
   const sliderRef = useRef<HTMLDivElement>(null)
   const { playSong } = usePlayer()
 
@@ -33,18 +34,18 @@ export default function SectionSlider({ section }: SectionSliderProps) {
   if (section.items.length === 0) return null
 
   return (
-    <section className="mt-8 mb-4 relative group">
+    <section className="mt-14 sm:mt-8 mb-8 sm:mb-4 relative group">
       <div className="flex items-start justify-between gap-4 mb-4 px-4 sm:px-6">
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold tracking-tight text-white/90 drop-shadow-sm">{section.title}</h2>
+        <div className="flex-1 overflow-hidden">
+          <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-white/90 drop-shadow-sm truncate">{section.title}</h2>
           {section.subtitle && (
-            <p className="text-sm text-white/50 mt-1 max-w-2xl leading-snug">{section.subtitle}</p>
+            <p className="text-xs sm:text-sm text-white/50 mt-1 max-w-2xl leading-snug line-clamp-1 sm:line-clamp-none">{section.subtitle}</p>
           )}
         </div>
         <motion.button 
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="text-sm font-semibold px-4 py-1.5 rounded-full bg-rose-600/15 text-rose-500 hover:bg-rose-600/25 hover:text-rose-400 transition-colors flex items-center gap-2 shrink-0 mt-1"
+          className="text-sm font-semibold px-4 py-1.5 rounded-full bg-rose-600/10 text-rose-500 hover:bg-rose-600/20 hover:text-rose-400 transition-colors flex items-center gap-2 shrink-0 mt-1"
           onClick={playAll}
         >
           <Play size={16} fill="currentColor" /> Play All
@@ -68,7 +69,7 @@ export default function SectionSlider({ section }: SectionSliderProps) {
         >
           {section.items.map((song, i) => (
             <div key={`${section.id}-${song.id}-${i}`} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
-              <SongCard song={song} queue={section.items} index={i} eager={i < 4} />
+              <SongCard song={song} queue={section.items} index={i} eager={eager && i < 4} />
             </div>
           ))}
         </div>

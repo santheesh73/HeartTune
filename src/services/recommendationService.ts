@@ -4,6 +4,7 @@ import { getRecentlyPlayed } from './recentlyPlayedService'
 import { getLikedSongs } from './likedSongsService'
 import { getRecentSearchHistory } from './searchHistoryService'
 import { getDownloads } from './downloadService'
+import { readOfflineCache, writeOfflineCache } from '../utils/offlineCache'
 
 export interface HomeSection {
   id: string
@@ -13,7 +14,11 @@ export interface HomeSection {
   type: 'song'
 }
 
-export type HomeFeedThunk = () => Promise<HomeSection | null>
+export interface HomeFeedConfig {
+  id: string
+  queryKey: string[]
+  fetchFn: () => Promise<HomeSection | null>
+}
 
 export interface UserProfile {
   topArtists: string[]
@@ -52,7 +57,6 @@ export async function clearRecommendationsCache(userId: string) {
       `discover_weekly:${userId}`,
       `because_you_liked:${userId}`
     ]
-    // In a real app we might use a bulk delete, but here we can just set TTL to 0
     await Promise.all(keys.map(key => setRedisCache(key, null, 0)))
   } catch { }
 }
@@ -70,13 +74,16 @@ function getArtistNames(song: Song) {
   return song?.artists?.primary?.map((a) => a.name) || []
 }
 
-// 1. User Preference Model
+function strictLanguageFilter(songs: Song[], language: string) {
+  if (language === 'all') return songs
+  return songs.filter(s => (s.language || '').toLowerCase() === language.toLowerCase())
+}
+
 export async function generateUserPreferenceModel(userId: string): Promise<UserProfile> {
   const cacheKey = `user_profile:${userId}`
   const cached = await getRedisCache<UserProfile>(cacheKey)
   if (cached) return cached
 
-  // Aggregate data in parallel
   const [recentSongs, likedSongs, searches, downloads] = await Promise.all([
     getRecentlyPlayed(userId, 50).catch(() => []),
     getLikedSongs(userId).catch(() => []),
@@ -85,16 +92,15 @@ export async function generateUserPreferenceModel(userId: string): Promise<UserP
   ])
 
   const artistWeights = new Map<string, number>()
-  const languageWeights = new Map<string, number>() // Usually derived from metadata, but fallback to general languages
+  const languageWeights = new Map<string, number>()
   
-  // Weights
   const LIKED_WEIGHT = 5
   const DOWNLOAD_WEIGHT = 5
   const RECENT_WEIGHT = 3
 
   const addWeight = (songs: any[], weight: number) => {
     songs.forEach(item => {
-      const song = item.song || item // handle direct song or nested record
+      const song = item.song || item
       if (!song) return
       getArtistNames(song).forEach(artist => {
         artistWeights.set(artist, (artistWeights.get(artist) || 0) + weight)
@@ -109,11 +115,8 @@ export async function generateUserPreferenceModel(userId: string): Promise<UserP
   addWeight(downloads, DOWNLOAD_WEIGHT)
   addWeight(recentSongs, RECENT_WEIGHT)
 
-  // Track recent searches for context weight
   searches.forEach(search => {
     if (search.query) {
-      // Very basic heuristic: if query matches artist name in saavn, boost it.
-      // We just boost exact matches for now.
       const match = Array.from(artistWeights.keys()).find(a => a.toLowerCase() === search.query.toLowerCase())
       if (match) {
         artistWeights.set(match, (artistWeights.get(match) || 0) + 2)
@@ -131,15 +134,14 @@ export async function generateUserPreferenceModel(userId: string): Promise<UserP
     .map(e => e[0])
     .slice(0, 3)
 
-  // Top genres can be mapped from artists typically, but we'll infer general mixes
   const profile: UserProfile = {
     topArtists,
     topLanguages: topLanguages.length > 0 ? topLanguages : ['hindi', 'english', 'tamil'],
-    topGenres: ['pop', 'romantic', 'dance'], // Defaulting for mixes if metadata lacks it
+    topGenres: ['pop', 'romantic', 'dance'],
     recentSeedSongs: recentSongs.slice(0, 5).map(r => r.song.id)
   }
 
-  await setRedisCache(cacheKey, profile, 43200) // Cache for 12 hours
+  await setRedisCache(cacheKey, profile, 43200)
   return profile
 }
 
@@ -149,84 +151,148 @@ export async function getTrendingSongs(language: string): Promise<HomeSection | 
   if (cached) return cached
 
   try {
-    const trending = await searchSongs(`top ${language === 'all' ? 'hits' : language + ' hits'}`, 1, 30)
-    const valid = filterFullSongs(trending.results).slice(0, 24)
-    if (valid.length === 0) return null
-
-    const section: HomeSection = { id: 'trending_songs', title: '🔥 Trending Songs', items: valid, type: 'song' }
-    await setRedisCache(cacheKey, section, 3600)
-    return section
-  } catch {
-    return null
-  }
+    const trending = await searchSongs(`top ${language === 'all' ? 'hits' : language + ' hits'}`, 1, 50)
+    const valid = strictLanguageFilter(filterFullSongs(trending.results), language).slice(0, 24)
+    if (valid.length > 0) {
+      const section: HomeSection = { id: 'trending_songs', title: '🔥 Trending Songs', items: valid, type: 'song' }
+      await setRedisCache(cacheKey, section, 3600)
+      writeOfflineCache(cacheKey, section)
+      return section
+    }
+  } catch { }
+  
+  const offline = readOfflineCache<HomeSection | null>(cacheKey, null)
+  if (offline) return offline
+  return null
 }
 
-export function generateHomeFeedThunks(userId: string | null, language: string): HomeFeedThunk[] {
-  const thunks: HomeFeedThunk[] = []
+export function generateHomeFeedConfigs(userId: string | null, language: string): HomeFeedConfig[] {
+  const configs: HomeFeedConfig[] = []
 
   const addRequestedSections = () => {
-    thunks.push(async () => {
-      const cacheKey = `custom:based_on_likes_v2:${userId || 'guest'}`
-      const cached = await getRedisCache<HomeSection>(cacheKey)
-      if (cached) return cached
-      try {
-        let query = 'top hits'
-        if (userId) {
-          try {
-            const profile = await generateUserPreferenceModel(userId)
-            if (profile.topArtists.length > 0) query = profile.topArtists[0]
-          } catch {}
-        }
-        const res = await searchSongs(userId ? query : 'top songs', 1, 30)
-        const valid = filterFullSongs(res.results).slice(0, 24)
-        if (valid.length > 0) {
-          const section: HomeSection = { 
-            id: 'based_on_likes_custom', 
-            title: '❤️ Based on Your Likes', 
-            subtitle: "Shows top hits matching your preferences (or general top hits if you haven't liked any songs yet).",
-            items: valid, 
-            type: 'song' 
+    configs.push({
+      id: 'based_on_likes_custom',
+      queryKey: ['home', 'based_on_likes', userId || 'guest', language],
+      fetchFn: async () => {
+        const cacheKey = `custom:based_on_likes_v2:${userId || 'guest'}:${language}`
+        const cached = await getRedisCache<HomeSection>(cacheKey)
+        if (cached) return cached
+        try {
+          let query = 'top hits'
+          if (userId) {
+            try {
+              const profile = await generateUserPreferenceModel(userId)
+              if (profile.topArtists.length > 0) query = profile.topArtists[0]
+            } catch {}
           }
-          await setRedisCache(cacheKey, section, 43200)
-          return section
-        }
-      } catch { }
-      return null
+          const queryWithLang = userId 
+            ? `${query} ${language === 'all' ? '' : language}` 
+            : `hits ${language === 'all' ? '' : language}`;
+          const res = await searchSongs(queryWithLang, 1, 50)
+          const valid = strictLanguageFilter(filterFullSongs(res.results), language).slice(0, 24)
+          if (valid.length > 0) {
+            const section: HomeSection = { 
+              id: 'based_on_likes_custom', 
+              title: '❤️ Based on Your Likes', 
+              subtitle: "Shows top hits matching your preferences (or general top hits if you haven't liked any songs yet).",
+              items: valid, 
+              type: 'song' 
+            }
+            await setRedisCache(cacheKey, section, 43200)
+            writeOfflineCache(cacheKey, section)
+            return section
+          }
+        } catch { }
+        const offline = readOfflineCache<HomeSection | null>(cacheKey, null)
+        if (offline) return offline
+        return null
+      }
     })
 
     const specificArtists = [
       { id: 'more_anirudh', artist: 'Anirudh Ravichander', title: 'More like Anirudh', subtitle: 'Shows top songs by Anirudh Ravichander.' },
       { id: 'more_vivek', artist: 'Vivek', title: 'More like Vivek', subtitle: 'Shows top songs by Vivek.' },
       { id: 'more_sai', artist: 'Sai Abhyankkar', title: 'More like Sai Abhyankkar', subtitle: 'Shows top songs by Sai Abhyankkar.' },
+      { id: 'more_hiphop', artist: 'Hiphop Tamizha', title: 'More like Hiphop Tamizha', subtitle: 'Shows top songs by Hiphop Tamizha.' },
+      { id: 'more_gv', artist: 'G.V. Prakash Kumar', title: 'More like G.V. Prakash', subtitle: 'Shows top songs by G.V. Prakash Kumar.' },
+      { id: 'more_arr', artist: 'A.R. Rahman', title: 'More like A.R. Rahman', subtitle: 'Shows top songs by A.R. Rahman.' },
+      { id: 'more_ilaiyaraaja', artist: 'Ilaiyaraaja', title: 'More like Ilaiyaraaja', subtitle: 'Shows top songs by Ilaiyaraaja.' },
     ]
     specificArtists.forEach(sa => {
-      thunks.push(async () => {
-        const cacheKey = `custom:specific_v2:${sa.id}`
-        const cached = await getRedisCache<HomeSection>(cacheKey)
-        if (cached) return cached
-        try {
-          const res = await searchSongs(sa.artist, 1, 30)
-          const valid = filterFullSongs(res.results).slice(0, 24)
-          if (valid.length > 0) {
-            const section: HomeSection = { 
-              id: sa.id, 
-              title: sa.title, 
-              subtitle: sa.subtitle,
-              items: valid, 
-              type: 'song' 
+      configs.push({
+        id: sa.id,
+        queryKey: ['home', 'specific', sa.id, language],
+        fetchFn: async () => {
+          const cacheKey = `custom:specific_v2:${sa.id}:${language}`
+          const cached = await getRedisCache<HomeSection>(cacheKey)
+          if (cached) return cached
+          try {
+            const queryWithLang = `${sa.artist} ${language === 'all' ? '' : language}`.trim()
+            const res = await searchSongs(queryWithLang, 1, 50)
+            const valid = strictLanguageFilter(filterFullSongs(res.results), language).slice(0, 24)
+            if (valid.length > 0) {
+              const section: HomeSection = { 
+                id: sa.id, 
+                title: sa.title, 
+                subtitle: sa.subtitle,
+                items: valid, 
+                type: 'song' 
+              }
+              await setRedisCache(cacheKey, section, 86400)
+              writeOfflineCache(cacheKey, section)
+              return section
             }
-            await setRedisCache(cacheKey, section, 86400)
-            return section
-          }
-        } catch { }
-        return null
+          } catch { }
+          const offline = readOfflineCache<HomeSection | null>(cacheKey, null)
+          if (offline) return offline
+          return null
+        }
+      })
+    })
+
+    const playlists = [
+      { id: 'playlist_hits', query: `super hit playlist ${language === 'all' ? '' : language}`, title: '🎵 Super Hit Playlist', subtitle: 'A collection of the biggest hits.' },
+      { id: 'playlist_party', query: `dance party playlist ${language === 'all' ? '' : language}`, title: '🕺 Dance Party', subtitle: 'Get ready to hit the dance floor.' }
+    ]
+    playlists.forEach(pl => {
+      configs.push({
+        id: pl.id,
+        queryKey: ['home', 'playlist', pl.id, language],
+        fetchFn: async () => {
+          const cacheKey = `custom:playlist_v2:${pl.id}:${language}`
+          const cached = await getRedisCache<HomeSection>(cacheKey)
+          if (cached) return cached
+          try {
+            const res = await searchSongs(pl.query, 1, 50)
+            const valid = strictLanguageFilter(filterFullSongs(res.results), language).slice(0, 24)
+            if (valid.length > 0) {
+              const section: HomeSection = { 
+                id: pl.id, 
+                title: pl.title, 
+                subtitle: pl.subtitle,
+                items: valid, 
+                type: 'song' 
+              }
+              await setRedisCache(cacheKey, section, 86400)
+              writeOfflineCache(cacheKey, section)
+              return section
+            }
+          } catch { }
+          const offline = readOfflineCache<HomeSection | null>(cacheKey, null)
+          if (offline) return offline
+          return null
+        }
       })
     })
   }
 
   if (!userId) {
-    // 1. Trending Songs (Always first)
-    thunks.push(() => getTrendingSongs(language))
+    configs.push({
+      id: 'trending',
+      queryKey: ['home', 'trending', language],
+      fetchFn: () => getTrendingSongs(language)
+    })
+    addRequestedSections()
     const genres = [
       { id: 'chill', q: `chill vibes ${language === 'all' ? '' : language}`, title: '🌙 Chill Vibes' },
       { id: 'workout', q: `workout mix ${language === 'all' ? '' : language}`, title: '💪 Workout Mix' },
@@ -234,107 +300,130 @@ export function generateHomeFeedThunks(userId: string | null, language: string):
       { id: 'party', q: `party mix ${language === 'all' ? '' : language}`, title: '🎉 Party Mix' },
     ]
     for (const g of genres) {
-      thunks.push(async () => {
-        const cacheKey = `home:generic:${g.id}:${language}`
-        const cached = await getRedisCache<HomeSection>(cacheKey)
-        if (cached) return cached
-        try {
-          const res = await searchSongs(g.q, 1, 30)
-          const valid = filterFullSongs(res.results).slice(0, 24)
-          if (valid.length === 0) return null
-          const section: HomeSection = { id: g.id, title: g.title, items: valid, type: 'song' }
-          await setRedisCache(cacheKey, section, 3600 * 2)
-          return section
-        } catch {
-          return null
+      configs.push({
+        id: g.id,
+        queryKey: ['home', 'generic', g.id, language],
+        fetchFn: async () => {
+          const cacheKey = `home:generic:${g.id}:${language}`
+          const cached = await getRedisCache<HomeSection>(cacheKey)
+          if (cached) return cached
+          try {
+            const res = await searchSongs(g.q, 1, 50)
+            const valid = strictLanguageFilter(filterFullSongs(res.results), language).slice(0, 24)
+            if (valid.length === 0) return null
+            const section: HomeSection = { id: g.id, title: g.title, items: valid, type: 'song' }
+            await setRedisCache(cacheKey, section, 3600 * 2)
+            return section
+          } catch {
+            return null
+          }
         }
       })
     }
-    addRequestedSections()
-    return thunks
+    return configs
   }
 
-  // --- SMART RECOMMENDATION SYSTEM FOR AUTHENTICATED USERS --- //
-
-  // Get user profile once for all thunks
   const profilePromise = generateUserPreferenceModel(userId)
 
-  // 1. Continue Listening
-  thunks.push(async () => {
-    const recentSongs = await getRecentlyPlayed(userId, 20).catch(() => [])
-    const recent = Array.from(new Map(recentSongs.map(e => e.song).filter(Boolean).map(s => [s.id, s])).values()) as Song[]
-    if (recent.length > 0) {
-      return { id: 'continue_listening', title: '🎧 Continue Listening', items: recent.slice(0, 24), type: 'song' }
+  configs.push({
+    id: 'continue_listening',
+    queryKey: ['home', 'continue_listening', userId],
+    fetchFn: async () => {
+      const recentSongs = await getRecentlyPlayed(userId, 20).catch(() => [])
+      const recent = Array.from(new Map(recentSongs.map(e => e.song).filter(Boolean).map(s => [s.id, s])).values()) as Song[]
+      const valid = strictLanguageFilter(recent, language)
+      if (valid.length > 0) {
+        return { id: 'continue_listening', title: '🎧 Continue Listening', items: valid.slice(0, 24), type: 'song' }
+      }
+      return null
     }
-    return null
   })
 
-  // 2. Discover Weekly
-  thunks.push(async () => {
-    const profile = await profilePromise
-    if (!profile.topArtists.length) return null
-    const cacheKey = `discover_weekly:${userId}`
-    const cached = await getRedisCache<HomeSection>(cacheKey)
-    if (cached) return cached
+  configs.push({
+    id: 'trending',
+    queryKey: ['home', 'trending', language],
+    fetchFn: () => getTrendingSongs(language)
+  })
 
-    try {
-      // Fetch related songs for top 2 artists
-      const relatedPromises = profile.topArtists.slice(0, 2).map(artist => searchRelatedSongs(artist, 20))
-      const results = await Promise.all(relatedPromises)
+  addRequestedSections()
+
+  configs.push({
+    id: 'discover_weekly',
+    queryKey: ['home', 'discover_weekly', userId],
+    fetchFn: async () => {
+      const profile = await profilePromise
+      if (!profile.topArtists.length) return null
+      const cacheKey = `discover_weekly:${userId}:${language}`
+      const cached = await getRedisCache<HomeSection>(cacheKey)
+      if (cached) return cached
+
+      try {
+        const relatedPromises = profile.topArtists.slice(0, 2).map(artist => {
+          const query = `${artist} ${language === 'all' ? '' : language}`.trim()
+          return searchRelatedSongs(query, 20)
+        })
+        const results = await Promise.all(relatedPromises)
+        
+        const mixed = shuffle(results.flatMap(r => strictLanguageFilter(filterFullSongs(r.results), language))).slice(0, 24)
+        if (mixed.length > 0) {
+          const section: HomeSection = { id: 'discover_weekly', title: '🎶 Discover Weekly', items: mixed, type: 'song' }
+          await setRedisCache(cacheKey, section, 43200) // 12 hours
+          return section
+        }
+      } catch { }
+      return null
+    }
+  })
+
+  configs.push({
+    id: 'trending_for_you',
+    queryKey: ['home', 'trending_for_you', userId, language],
+    fetchFn: async () => {
+      const profile = await profilePromise
+      const prefLang = profile.topLanguages[0] || language
+      const cacheKey = `trending_for_you:${userId}:${prefLang}`
+      const cached = await getRedisCache<HomeSection>(cacheKey)
+      if (cached) return cached
+
+      try {
+        const trending = await searchSongs(`top ${prefLang === 'all' ? 'hits' : prefLang + ' hits'}`, 1, 50)
+        const valid = strictLanguageFilter(filterFullSongs(trending.results), prefLang).slice(0, 24)
+        if (valid.length > 0) {
+          const section: HomeSection = { id: 'trending_for_you', title: '🔥 Trending For You', items: valid, type: 'song' }
+          await setRedisCache(cacheKey, section, 14400) // 4 hours
+          return section
+        }
+      } catch { }
+      return getTrendingSongs(language)
+    }
+  })
+
+  configs.push({
+    id: 'because_you_liked',
+    queryKey: ['home', 'because_you_liked', userId],
+    fetchFn: async () => {
+      const profile = await profilePromise
+      if (!profile.topArtists.length) return null
       
-      const mixed = shuffle(results.flatMap(r => filterFullSongs(r.results))).slice(0, 24)
-      if (mixed.length > 0) {
-        const section: HomeSection = { id: 'discover_weekly', title: '🎶 Discover Weekly', items: mixed, type: 'song' }
-        await setRedisCache(cacheKey, section, 43200) // 12 hours
-        return section
-      }
-    } catch { }
-    return null
+      const topArtist = profile.topArtists[0]
+      const cacheKey = `because_you_liked:${userId}:${topArtist}:${language}`
+      const cached = await getRedisCache<HomeSection>(cacheKey)
+      if (cached) return cached
+
+      try {
+        const query = `${topArtist} ${language === 'all' ? '' : language}`.trim()
+        const related = await searchRelatedSongs(query, 50)
+        const valid = strictLanguageFilter(filterFullSongs(related.results), language)
+        if (valid.length > 0) {
+          const section: HomeSection = { id: 'because_you_liked', title: `❤️ Because You Liked ${topArtist}`, items: valid, type: 'song' }
+          await setRedisCache(cacheKey, section, 43200)
+          return section
+        }
+      } catch { }
+      return null
+    }
   })
 
-  // 3. Trending For You
-  thunks.push(async () => {
-    const profile = await profilePromise
-    const prefLang = profile.topLanguages[0] || language
-    const cacheKey = `trending_for_you:${userId}:${prefLang}`
-    const cached = await getRedisCache<HomeSection>(cacheKey)
-    if (cached) return cached
-
-    try {
-      const trending = await searchSongs(`top ${prefLang === 'all' ? 'hits' : prefLang + ' hits'}`, 1, 30)
-      const valid = filterFullSongs(trending.results).slice(0, 24)
-      if (valid.length > 0) {
-        const section: HomeSection = { id: 'trending_for_you', title: '🔥 Trending For You', items: valid, type: 'song' }
-        await setRedisCache(cacheKey, section, 14400) // 4 hours
-        return section
-      }
-    } catch { }
-    return getTrendingSongs(language) // fallback
-  })
-
-  // 4. Because You Liked
-  thunks.push(async () => {
-    const profile = await profilePromise
-    if (!profile.topArtists.length) return null
-    
-    const topArtist = profile.topArtists[0]
-    const cacheKey = `because_you_liked:${userId}:${topArtist}`
-    const cached = await getRedisCache<HomeSection>(cacheKey)
-    if (cached) return cached
-
-    try {
-      const related = await searchRelatedSongs(topArtist, 24)
-      const valid = filterFullSongs(related.results)
-      if (valid.length > 0) {
-        const section: HomeSection = { id: 'because_you_liked', title: `❤️ Because You Liked ${topArtist}`, items: valid, type: 'song' }
-        await setRedisCache(cacheKey, section, 43200)
-        return section
-      }
-    } catch { }
-    return null
-  })
-
-  // 5. Daily Mixes
   const mixTypes = [
     { id: 'daily_mix_1', prefix: 'Daily Mix 1', suffix: 'Mix', icon: '🎵' },
     { id: 'daily_mix_2', prefix: 'Daily Mix 2', suffix: 'Hits', icon: '🎵' },
@@ -343,55 +432,62 @@ export function generateHomeFeedThunks(userId: string | null, language: string):
   ]
 
   mixTypes.forEach((mix, i) => {
-    thunks.push(async () => {
-      const profile = await profilePromise
-      const artist = profile.topArtists[i % profile.topArtists.length]
-      if (!artist) return null
+    configs.push({
+      id: mix.id,
+      queryKey: ['home', 'mix', userId, mix.id],
+      fetchFn: async () => {
+        const profile = await profilePromise
+        const artist = profile.topArtists[i % profile.topArtists.length]
+        if (!artist) return null
 
-      const cacheKey = `mix:${userId}:${mix.id}:${artist}`
-      const cached = await getRedisCache<HomeSection>(cacheKey)
-      if (cached) return cached
+        const cacheKey = `mix:${userId}:${mix.id}:${artist}:${language}`
+        const cached = await getRedisCache<HomeSection>(cacheKey)
+        if (cached) return cached
 
-      try {
-        const res = await searchSongs(`${artist} ${mix.suffix}`, 1, 30)
-        const valid = filterFullSongs(res.results).slice(0, 24)
-        if (valid.length > 0) {
-          const section: HomeSection = { id: mix.id, title: `${mix.icon} ${mix.prefix}`, items: valid, type: 'song' }
-          await setRedisCache(cacheKey, section, 43200)
-          return section
-        }
-      } catch { }
-      return null
+        try {
+          const query = `${artist} ${mix.suffix} ${language === 'all' ? '' : language}`.trim()
+          const res = await searchSongs(query, 1, 50)
+          const valid = strictLanguageFilter(filterFullSongs(res.results), language).slice(0, 24)
+          if (valid.length > 0) {
+            const section: HomeSection = { id: mix.id, title: `${mix.icon} ${mix.prefix}`, items: valid, type: 'song' }
+            await setRedisCache(cacheKey, section, 43200)
+            return section
+          }
+        } catch { }
+        return null
+      }
     })
   })
 
-  // 6. Search Based (If recent searches exist)
-  thunks.push(async () => {
-    const searches = await getRecentSearchHistory(userId, 5).catch(() => [])
-    if (searches.length > 0) {
-      const topSearch = searches[0].query
-      const searchMix = await searchSongs(`${topSearch} hits`, 1, 24)
-      const validSearch = filterFullSongs(searchMix.results)
-      if (validSearch.length > 0) {
-        return {
-          id: 'search_based',
-          title: `Because you searched for "${topSearch}"`,
-          items: validSearch.slice(0, 24),
-          type: 'song'
+  configs.push({
+    id: 'search_based',
+    queryKey: ['home', 'search_based', userId, language],
+    fetchFn: async () => {
+      const searches = await getRecentSearchHistory(userId, 5).catch(() => [])
+      if (searches.length > 0) {
+        const topSearch = searches[0].query
+        const query = `${topSearch} hits ${language === 'all' ? '' : language}`.trim()
+        const searchMix = await searchSongs(query, 1, 50)
+        const validSearch = strictLanguageFilter(filterFullSongs(searchMix.results), language)
+        if (validSearch.length > 0) {
+          return {
+            id: 'search_based',
+            title: `Because you searched for "${topSearch}"`,
+            items: validSearch.slice(0, 24),
+            type: 'song'
+          }
         }
       }
+      return null
     }
-    return null
   })
 
-  addRequestedSections()
-  return thunks
+  return configs
 }
 
-// Keep generateHomeFeed for backwards compatibility if needed elsewhere
 export async function generateHomeFeed(userId: string | null, language: string): Promise<HomeSection[]> {
-  const thunks = generateHomeFeedThunks(userId, language)
-  const results = await Promise.all(thunks.map(t => t()))
+  const configs = generateHomeFeedConfigs(userId, language)
+  const results = await Promise.all(configs.map(c => c.fetchFn()))
   return results.filter(Boolean) as HomeSection[]
 }
 

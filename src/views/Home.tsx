@@ -5,7 +5,7 @@ import { Globe2, Sparkles, TrendingUp } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useLanguage } from '../context/LanguageContext'
 
-import { generateHomeFeedThunks, clearRecommendationsCache, type HomeFeedThunk } from '../services/recommendationService'
+import { generateHomeFeedConfigs, clearRecommendationsCache, type HomeFeedConfig } from '../services/recommendationService'
 import LyricistAlbums from '../components/LyricistAlbums'
 import TamilArtistAlbums from '../components/TamilArtistAlbums'
 import LazySection from '../components/LazySection'
@@ -16,12 +16,12 @@ export default function Home() {
   const { user } = useAuth()
   const { language, setLanguage, languages } = useLanguage()
   
-  const [thunks, setThunks] = useState<HomeFeedThunk[]>([])
+  const [configs, setConfigs] = useState<HomeFeedConfig[]>([])
 
   useEffect(() => {
     const fetchFeeds = () => {
-      const feedThunks = generateHomeFeedThunks(user?.id || null, language)
-      setThunks(feedThunks)
+      const feedConfigs = generateHomeFeedConfigs(user?.id || null, language)
+      setConfigs(feedConfigs)
     }
 
     fetchFeeds()
@@ -69,45 +69,37 @@ export default function Home() {
         </div>
       </motion.header>
 
-      <section className="quick-picks mb-8">
-        {languages.map((l, i) => (
-          <motion.div
-            key={l.id}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.05 }}
-            whileHover={{ scale: 1.03 }}
-          >
-            <button
-              type="button"
-              className={`quick-pick lang-pick ${language === l.id ? 'active' : ''}`}
-              onClick={() => setLanguage(l.id)}
-              title={`Show ${l.label} songs`}
-            >
-              <span className="quick-pick-icon">
-                {i === 0 ? (
-                  <Globe2 size={20} />
-                ) : i % 2 === 0 ? (
-                  <Sparkles size={20} />
-                ) : (
-                  <TrendingUp size={20} />
-                )}
-              </span>
+      <section className="mb-8 hidden sm:flex items-center gap-3 bg-[#1a1a1a] border border-white/10 rounded-xl p-2 w-fit">
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500">
+          <Globe2 size={18} />
+        </div>
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="bg-transparent border-none text-white/90 text-sm font-medium outline-none cursor-pointer appearance-none min-w-[120px] pr-8"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right center',
+          }}
+        >
+          {languages.map((l) => (
+            <option key={l.id} value={l.id} className="bg-[#1a1a1a] text-white">
               {l.label}
-            </button>
-          </motion.div>
-        ))}
+            </option>
+          ))}
+        </select>
       </section>
 
       <div className="flex flex-col gap-2">
-        {thunks.map((thunk, i) => (
+        {configs.map((config, i) => (
           <motion.div 
-            key={`section-${i}`}
+            key={config.id || `section-${i}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <LazySection thunk={thunk} />
+            <LazySection config={config} eager={i < 4} />
           </motion.div>
         ))}
 
