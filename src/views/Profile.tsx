@@ -215,13 +215,7 @@ export default function Profile() {
           >
             Use default avatar
           </button>
-          <Link
-            to="/settings"
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold bg-white/10 hover:bg-white/20 text-white transition mt-4 md:mt-0 md:ml-auto"
-          >
-            <SettingsIcon size={16} />
-            Settings
-          </Link>
+
           <button
             type="button"
             className="profile-logout-btn"
