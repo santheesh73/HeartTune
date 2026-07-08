@@ -89,7 +89,7 @@ export default function Settings() {
                       : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.08] hover:border-white/10'
                   }`}
                   style={{
-                    boxShadow: isActive ? \`0 8px 30px \${config.glow}\` : 'none'
+                    boxShadow: isActive ? `0 8px 30px ${config.glow}` : 'none'
                   }}
                 >
                   <div 
@@ -102,7 +102,7 @@ export default function Settings() {
                       </motion.div>
                     )}
                   </div>
-                  <span className={\`text-sm font-semibold tracking-wide \${isActive ? 'text-white' : 'text-white/70'}\`}>
+                  <span className={`text-sm font-semibold tracking-wide ${isActive ? 'text-white' : 'text-white/70'}`}>
                     {config.label}
                   </span>
                 </button>
