@@ -1,16 +1,12 @@
 import { supabase } from '../lib/supabase'
 
-// Flag to prevent console spam if the table hasn't been created yet
-let tableMissing = false;
-
 export async function addSearchHistory(userId: string, query: string, type: 'all' | 'song' | 'album' | 'artist' = 'all') {
   try {
-    if (tableMissing || !supabase) return null
+    if (!supabase) return null
 
     const trimmed = query.trim()
     if (!trimmed) return null
 
-    // We don't want to block the UI, so we just fire and forget mostly, but handle it properly.
     const { data, error } = await supabase
       .from('search_history')
       .insert({
@@ -22,8 +18,12 @@ export async function addSearchHistory(userId: string, query: string, type: 'all
       .single()
 
     if (error) {
-      if (error.code === '42P01' || error.message?.includes('not found')) tableMissing = true;
-      // Silently fail if table doesn't exist or other errors occur
+      console.warn('Supabase Error (addSearchHistory)', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
       return null
     }
 
@@ -33,15 +33,19 @@ export async function addSearchHistory(userId: string, query: string, type: 'all
 
     return data
   } catch (err: any) {
-    if (err?.message?.includes('not found') || err?.status === 404) tableMissing = true;
-    // Silently fail if table doesn't exist or other errors occur
+    console.warn('Supabase Error (addSearchHistory catch)', {
+      code: err?.code,
+      message: err?.message,
+      details: err?.details,
+      hint: err?.hint
+    })
     return null
   }
 }
 
 export async function getRecentSearchHistory(userId: string, limit = 10) {
   try {
-    if (tableMissing || !supabase) return []
+    if (!supabase) return []
 
     const { data, error } = await supabase
       .from('search_history')
@@ -51,14 +55,22 @@ export async function getRecentSearchHistory(userId: string, limit = 10) {
       .limit(limit)
 
     if (error) {
-      if (error.code === '42P01' || error.message?.includes('not found')) tableMissing = true;
+      console.warn('Supabase Error (getRecentSearchHistory)', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
       throw error
     }
     return data
   } catch (err: any) {
-    if (err?.code === '42P01' || err?.message?.includes('not found') || err?.status === 404) tableMissing = true;
-    // Silently fail if table doesn't exist or other errors occur, 
-    // to avoid console spam before migration is applied.
+    console.warn('Supabase Error (getRecentSearchHistory catch)', {
+      code: err?.code,
+      message: err?.message,
+      details: err?.details,
+      hint: err?.hint
+    })
     return []
   }
 }

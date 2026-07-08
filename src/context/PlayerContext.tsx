@@ -32,7 +32,7 @@ function loadQueueState() {
     const saved = localStorage.getItem(QUEUE_STORAGE_KEY)
     if (saved) return JSON.parse(saved)
   } catch (e) {
-    console.error('Failed to load queue state', e)
+    console.warn('Failed to load queue state', e)
   }
   return null
 }
@@ -137,6 +137,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         progressRef.current = 0
       }
 
+      setCurrentSong(song)
+      currentSongRef.current = song
+      setDuration(song.duration || 0)
+      updateMediaSession(song)
+      setIsPlaying(true)
+
       const download = await getDownload(song.id)
       let src: string
       let resolvedSong: Song
@@ -185,14 +191,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (user) {
         void addRecentlyPlayed(user.id, resolvedSong).catch((error) => {
           if (!isOfflineError(error)) {
-            console.error('Unable to store recently played song:', error)
+            console.warn('Unable to store recently played song:', error)
           }
         })
       }
       return true
     } catch (error: any) {
       if (error.name !== 'AbortError') {
-        console.error('Unable to play song:', error)
+        console.warn('Unable to play song:', error)
         
         // Error Recovery: Retry once before skipping
         if (retryCountRef.current < 1) {
@@ -254,7 +260,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setIsPlaying(false)
       return false
     } catch (error) {
-      console.error('Unable to autoplay smart recommendation:', error)
+      console.warn('Unable to autoplay smart recommendation:', error)
       setIsPlaying(false)
       return false
     } finally {
@@ -333,7 +339,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(QUEUE_STORAGE_KEY)
       }
     } catch (e) {
-      console.error('Failed to save queue state', e)
+      console.warn('Failed to save queue state', e)
     }
   }, [currentSong, language, playNextInternal, queue, queueIndex, repeat, shuffle])
 
@@ -342,21 +348,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!audio) return
     if (!currentSong) return
     
-    if (isPlaying) {
+    if (!audio.paused) {
       audio.pause()
-      setIsPlaying(false)
     } else {
       if (!audio.src || audio.src === window.location.href) {
         void loadAndPlay(currentSong, true)
       } else {
-        void audio.play().then(() => {
-          setIsPlaying(true)
-        }).catch(() => {
-          setIsPlaying(false)
-        })
+        void audio.play().catch(() => {})
       }
     }
-  }, [currentSong, isPlaying, loadAndPlay])
+  }, [currentSong, loadAndPlay])
 
   const playPrev = useCallback(() => {
     const audio = audioRef.current
@@ -411,6 +412,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const audio = audioRef.current
     if (!audio) return
 
+    const onPlayEvent = () => setIsPlaying(true)
+    const onPauseEvent = () => setIsPlaying(false)
+
     const onTime = () => {
       setProgress(audio.currentTime)
       progressRef.current = audio.currentTime
@@ -452,6 +456,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setProgress(restoreProgressRef.current)
     }
 
+    audio.addEventListener('play', onPlayEvent)
+    audio.addEventListener('pause', onPauseEvent)
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('loadedmetadata', onDuration)
     audio.addEventListener('durationchange', onDuration)
@@ -472,6 +478,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     window.addEventListener('online', onOnline)
 
     return () => {
+      audio.removeEventListener('play', onPlayEvent)
+      audio.removeEventListener('pause', onPauseEvent)
       audio.removeEventListener('timeupdate', onTime)
       audio.removeEventListener('loadedmetadata', onDuration)
       audio.removeEventListener('durationchange', onDuration)
@@ -482,7 +490,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.pause()
       if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
     }
-  }, [updateDuration, isPlaying])
+  }, [updateDuration])
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume

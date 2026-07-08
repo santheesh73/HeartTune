@@ -52,8 +52,7 @@ function ArtworkImageComponent({
       sizes={sizes}
       priority={priority}
       loading={priority ? 'eager' : 'lazy'}
-      placeholder="blur"
-      blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+      placeholder="empty"
       referrerPolicy="no-referrer"
       className={`${className} artwork-image ${loaded ? 'artwork-image-loaded' : 'artwork-image-loading'}`.trim()}
       onLoad={() => setLoaded(true)}

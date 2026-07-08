@@ -7,6 +7,17 @@ const saavnApiOrigin = (process.env.NEXT_PUBLIC_SAAVN_API_URL || 'https://saavn.
 const hasSentryAuth = Boolean(process.env.SENTRY_AUTH_TOKEN)
 const sentryTunnelRoute = process.env.SENTRY_TUNNEL_ROUTE?.trim() || undefined
 
+const securityHeaders = [
+  { key: 'X-DNS-Prefetch-Control', value: 'on' },
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  { key: 'X-XSS-Protection', value: '1; mode=block' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Content-Security-Policy', value: "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:;" }
+]
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   compress: true,
@@ -46,6 +57,10 @@ const nextConfig = {
   },
   async headers() {
     return [
+      {
+        source: '/(.*)',
+        headers: securityHeaders,
+      },
       {
         source: '/service-worker.js',
         headers: [

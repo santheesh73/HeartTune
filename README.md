@@ -1,201 +1,64 @@
-# 🎵 HeartWave
+# JioSaavn API
 
-### Your Music. Your Mood. Your World.
+![GitHub License](https://img.shields.io/github/license/sumitkolhe/jiosaavn-api)
+![GitHub Release](https://img.shields.io/github/v/release/sumitkolhe/jiosaavn-api)
 
-HeartWave is a modern AI-powered music streaming platform built with **Next.js, React, TypeScript, and Supabase**, designed to deliver a seamless, personalized, and immersive music experience. With powerful playlist management, intelligent recommendations, offline downloads, multilingual support, and a beautiful user interface, HeartWave transforms the way users discover and enjoy music.
+An Unofficial API for downloading high-quality songs, albums, playlists, and more from [JioSaavn](https://jiosaavn.com).
 
----
+## 📚 Documentation
 
-## ✨ Features
+Check out the [API documentation](https://saavn.dev/docs) for detailed information on how to use the API.
 
-### 🎧 Music Streaming
+## 📰 Changelog
 
-* High-quality music playback
-* Fast song search and discovery
-* Trending tracks and popular albums
-* Artist and album exploration
-* Smooth playback controls
+For a detailed list of changes, see the [CHANGELOG](CHANGELOG.md).
 
-### ❤️ Personal Library
+## 🔌 Running Locally
 
-* Like and save favorite songs
-* Create and manage playlists
-* Recently played history
-* Personalized music collection
-* Quick access to favorite content
+1. Clone the repository:
 
-### 📥 Offline Downloads
+   ```sh
+   git clone https://github.com/sumitkolhe/jiosaavn-api
+   cd jiosaavn-api
+   ```
 
-* Download songs for offline listening
-* IndexedDB-powered local storage
-* Fast access to downloaded tracks
-* Offline playback support
+### Using Docker
 
-### 🌍 Multilingual Experience
-
-* Multiple language support
-* Localized user interface
-* Enhanced accessibility for global users
-
-### 🔐 Secure Authentication
-
-* Supabase Authentication
-* Secure user sessions
-* Protected user data
-* Row Level Security (RLS)
-
-### ⚡ Modern User Experience
-
-* Responsive design
-* Mobile-first approach
-* Smooth animations
-* Dark mode interface
-* Fast loading performance
-
----
-
-## 🏗️ Tech Stack
-
-### Frontend
-
-* Next.js 16
-* React 19
-* TypeScript
-* React Router DOM
-* Framer Motion
-* Lucide React
-
-### Backend & Database
-
-* Supabase
-* PostgreSQL
-* Supabase Authentication
-* Row Level Security (RLS)
-
-### Deployment
-
-* Vercel
-
-### Storage
-
-* IndexedDB
-* Browser Local Storage
-
----
-
-## 📸 Application Highlights
-
-✅ Modern Music Streaming Experience
-
-✅ Playlist Management System
-
-✅ Personalized Music Library
-
-✅ Offline Download Support
-
-✅ Responsive Mobile Design
-
-✅ Secure User Authentication
-
-✅ Fast Search & Discovery
-
-✅ Beautiful UI/UX
-
----
-
-## 📂 Project Structure
-
-```text
-HeartWave/
-├── src/
-│   ├── app/
-│   ├── components/
-│   ├── context/
-│   ├── views/
-│   ├── api/
-│   ├── hooks/
-│   ├── lib/
-│   └── utils/
-├── public/
-├── supabase/
-├── middleware.ts
-├── next.config.mjs
-└── package.json
+```sh
+docker-compose up
 ```
 
----
+OR
 
-## 🔒 Security
+### Manually
 
-HeartWave leverages modern security practices:
+> [!NOTE]
+> You need `Bun(1.0.29+)` or `Node.js(v20+)`
 
-* Supabase Authentication
-* Row Level Security (RLS)
-* Protected User Data
-* Secure Environment Variables
-* Session Management
-* Database Access Controls
+2. Install the required dependencies:
 
-Future enhancements include:
+   ```sh
+   bun install
+   ```
 
-* Advanced API Rate Limiting
-* Security Headers
-* Email Verification
-* Multi-Factor Authentication (MFA)
-* Monitoring & Audit Logging
+3. Launch the development server:
 
----
+   ```sh
+   bun run dev
+   ```
 
-## 🎯 Future Roadmap
+## ☁️ Deploying Your Own Instance
 
-* AI-Powered Music Recommendations
-* Smart Mood-Based Playlists
-* Social Music Sharing
-* Real-Time Collaborative Playlists
-* Artist Dashboard
-* Premium Subscription Features
-* Enhanced Offline Experience
-* Advanced Analytics
+JioSaavn API can be deployed to either Cloudflare Workers or Vercel. Below are the instructions for deploying to each platform.
 
----
+### Cloudflare Workers
 
-## 📈 Project Status
+[![Deploy with Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/sumitkolhe/jiosaavn-api)
 
-🚧 Actively Under Development
+### Vercel
 
-HeartWave is continuously evolving with new features, security improvements, performance optimizations, and enhanced user experiences.
-
----
-
-## 👨‍💻 Developer
-
-### Santheesh
-
-AI & Data Science Student
-Full Stack Developer | AI Enthusiast | Problem Solver
-
-Passionate about building intelligent, scalable, and user-centric applications that combine modern web technologies with exceptional user experiences.
-
----
-
-## ⭐ Support
-
-If you found this project useful:
-
-⭐ Star the repository
-
-🍴 Fork the project
-
-🛠️ Contribute improvements
-
-📢 Share feedback
-
----
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sumitkolhe/jiosaavn-api)
 
 ## 📜 License
 
-This project is licensed under the MIT License.
-
----
-
-### "Music is not just sound — it's emotion, memory, and connection. HeartWave brings them together."
+This project is distributed under the [MIT License](https://opensource.org/licenses/MIT). For more information, see the [LICENSE](LICENSE) file included in this repository.

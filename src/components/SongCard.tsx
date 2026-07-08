@@ -29,18 +29,33 @@ export default function SongCard({ song, queue, index = 0, eager = false }: Song
 
   return (
     <motion.div
-      className="song-card"
+      className="song-card hover:-translate-y-1.5 transition-transform duration-200"
       style={{ zIndex: isMenuOpen ? 50 : 1, position: 'relative' }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index, 6) * 0.03 }}
-      whileHover={{ y: -6 }}
+      role="button"
+      tabIndex={0}
       onClick={() => {
-        if (isMenuOpen) setIsMenuOpen(false)
-        else playSong(song, queue || [song])
+        setIsMenuOpen(false)
+        playSong(song, queue || [song])
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          setIsMenuOpen(false)
+          playSong(song, queue || [song])
+        }
       }}
     >
-      <div className="song-card-image-wrap">
+      <div 
+        className="song-card-image-wrap"
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsMenuOpen(false)
+          playSong(song, queue || [song])
+        }}
+      >
         <SongArtwork
           images={song.image}
           alt={song.name}

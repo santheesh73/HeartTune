@@ -102,7 +102,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const data = await getUserPlaylists(user.id)
       setPlaylists(data)
     } catch (err) {
-      console.error('Failed to refresh playlists', err)
+      console.warn('Failed to refresh playlists', err)
     }
   }, [user])
 
@@ -115,7 +115,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const data = await getLikedAlbums(user.id)
       setLikedAlbums(data)
     } catch (err) {
-      console.error('Failed to refresh liked albums', err)
+      console.warn('Failed to refresh liked albums', err)
     }
   }, [user])
 

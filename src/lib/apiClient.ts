@@ -24,6 +24,7 @@ function assertAllowedUrl(url: string) {
   const allowedOrigins = new Set([
     window.location.origin,
     new URL(process.env.NEXT_PUBLIC_SAAVN_API_URL || 'https://saavn.sumit.co').origin,
+    'https://jiosaavn-api-v4.vercel.app',
     'https://api.dicebear.com',
   ])
 

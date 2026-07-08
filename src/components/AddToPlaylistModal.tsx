@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Plus, ListMusic, Loader, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePlaylists } from '../hooks/usePlaylists'
@@ -18,6 +19,11 @@ export default function AddToPlaylistModal({ isOpen, onClose, song, songs }: Add
   const { playlists, loading: playlistsLoading, addSongToPlaylist, addSongsToPlaylist } = usePlaylists()
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   const [addingTo, setAddingTo] = useState<string | null>(null)
   const [addedTo, setAddedTo] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
@@ -74,7 +80,9 @@ export default function AddToPlaylistModal({ isOpen, onClose, song, songs }: Add
     }
   }
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <>
       <AnimatePresence>
         {isOpen && (
@@ -184,6 +192,7 @@ export default function AddToPlaylistModal({ isOpen, onClose, song, songs }: Add
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
-    </>
+    </>,
+    document.body
   )
 }

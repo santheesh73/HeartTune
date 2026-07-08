@@ -12,7 +12,6 @@ import {
 import type { Song, Album } from '../types'
 import SongCard from '../components/SongCard'
 import AlbumCard from '../components/AlbumCard'
-import LyricistAlbums from '../components/LyricistAlbums'
 import TamilArtistAlbums from '../components/TamilArtistAlbums'
 import { usePlayer } from '../context/PlayerContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -176,8 +175,6 @@ export default function TopPicks() {
               <p className="lyricist-subtitle">Popular albums will appear here after the next online refresh.</p>
             )}
           </section>
-
-          <LyricistAlbums language={language} />
         </>
       )}
     </div>

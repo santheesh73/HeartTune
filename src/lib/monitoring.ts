@@ -11,10 +11,13 @@ export type SecurityEventType =
   | 'playback_failure'
   | 'search_failure'
 
+import * as Sentry from '@sentry/nextjs'
+
 export async function captureAppError(error: unknown, context: Record<string, unknown> = {}) {
-  const sentry = await import('@sentry/nextjs').catch(() => null)
-  if (sentry) {
-    sentry.captureException(error, { extra: context })
+  try {
+    Sentry.captureException(error, { extra: context })
+  } catch {
+    // Ignore errors from Sentry itself
   }
 }
 
@@ -38,9 +41,21 @@ export async function auditLog(eventType: SecurityEventType, metadata: Record<st
     })
 
     if (error) {
+      console.warn('Supabase Error (auditLog)', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
       await captureAppError(error, { eventType, metadata })
     }
-  } catch {
+  } catch (err: any) {
+    console.warn('Supabase Error (auditLog catch)', {
+      code: err?.code,
+      message: err?.message,
+      details: err?.details,
+      hint: err?.hint
+    })
     // Monitoring must never affect the user-facing request or flood the Next.js
     // development error overlay when the logging backend is unavailable.
   }

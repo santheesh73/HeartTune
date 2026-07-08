@@ -15,17 +15,7 @@ function readEnv(name: string) {
 }
 
 function getApiBase() {
-  const explicitBase = readEnv('NEXT_PUBLIC_API_BASE_URL') || readEnv('VITE_API_BASE_URL')
-  if (explicitBase) {
-    return trimTrailingSlash(explicitBase)
-  }
-
-  const origin = trimTrailingSlash(
-    readEnv('NEXT_PUBLIC_SAAVN_API_URL') ||
-    readEnv('VITE_SAAVN_API_URL') ||
-    'https://saavn.sumit.co'
-  )
-  return `${origin}/api`
+  return 'https://jiosaavn-api-v4.vercel.app/api'
 }
 
 const BASE = getApiBase()
@@ -33,6 +23,9 @@ const API_CACHE_TTL_MS = 5 * 60 * 1000
 
 const apiResponseCache = new Map<string, { expiresAt: number; data: unknown }>()
 const apiInFlight = new Map<string, Promise<unknown>>()
+
+// Memory cache for full song objects to eliminate playback delay
+const fullSongCache = new Map<string, Song>()
 
 function decodeHtmlEntities(value: string) {
   return value
@@ -94,6 +87,8 @@ async function fetchApi<T>(path: string): Promise<T> {
     const eventType = path.startsWith('/search') ? 'search_failure' : path.startsWith('/songs') ? 'playback_failure' : 'api_failure'
     await auditLog(eventType, { path })
     await captureAppError(error, { path, eventType })
+    
+    // Throw the error so callers can trigger their offline fallbacks.
     throw error
   } finally {
     apiInFlight.delete(path)
@@ -357,17 +352,28 @@ export async function searchPlaylists(query: string, page = 1, limit = 12) {
 
 export async function getAlbum(id: string) {
   const data = await fetchApi<Album | Album[]>(`/albums?id=${id}`)
-  return Array.isArray(data) ? data[0] : data
+  const album = Array.isArray(data) ? data[0] : data
+  if (album?.songs?.length) {
+    getSongs(album.songs.map(s => s.id).slice(0, 50)).catch(() => {})
+  }
+  return album
 }
 
 export async function getPlaylist(id: string) {
   const data = await fetchApi<Playlist | Playlist[]>(`/playlists?id=${id}`)
-  return Array.isArray(data) ? data[0] : data
+  const pl = Array.isArray(data) ? data[0] : data
+  if (pl?.songs?.length) {
+    getSongs(pl.songs.map(s => s.id).slice(0, 50)).catch(() => {})
+  }
+  return pl
 }
 
 export async function getSong(id: string) {
+  if (fullSongCache.has(id)) return fullSongCache.get(id)!
   const data = await fetchApi<Song[]>(`/songs?ids=${id}`)
-  return data[0] || null
+  const s = data[0] || null
+  if (s?.downloadUrl?.length) fullSongCache.set(s.id, s)
+  return s
 }
 
 export async function getSongs(ids: string[]) {
@@ -375,13 +381,25 @@ export async function getSongs(ids: string[]) {
   if (!uniqueIds.length) return []
 
   const data = await fetchApi<Song[]>(`/songs?ids=${uniqueIds.map(encodeURIComponent).join(',')}`)
-  return data || []
+  const songs = data || []
+  for (const s of songs) {
+    if (s.downloadUrl?.length) fullSongCache.set(s.id, s)
+  }
+  return songs
 }
 
-/** Fetch full song metadata + stream URLs before playback. */
 export async function resolvePlayableSong(song: Song): Promise<Song> {
   if (song.downloadUrl && song.downloadUrl.length > 0 && getBestAudioUrl(song)) {
     return song
+  }
+  if (fullSongCache.has(song.id)) {
+    const cached = fullSongCache.get(song.id)!
+    return {
+      ...song,
+      ...cached,
+      downloadUrl: cached.downloadUrl?.length ? cached.downloadUrl : song.downloadUrl,
+      duration: cached.duration || song.duration,
+    }
   }
 
   try {

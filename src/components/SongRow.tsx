@@ -121,7 +121,7 @@ export default function SongRow({
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.03 }}
-      onDoubleClick={() => playSong(song, queue)}
+      onClick={() => playSong(song, queue)}
       drag={swipeEnabled ? 'x' : false}
       dragConstraints={{ left: 0, right: 120 }}
       dragElastic={0.08}

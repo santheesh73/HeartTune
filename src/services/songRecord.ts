@@ -39,8 +39,20 @@ export function buildSongRecord(song: Song): SongRecordShape {
 }
 
 export function mapRecordToSong(record: SongRecordShape): Song {
-  const imageUrl = record.image_url || ''
-  const images = imageUrl
+  let imageUrl = record.image_url || ''
+  let parsedLegacyImages = null
+
+  if (imageUrl.startsWith('[') && imageUrl.endsWith(']')) {
+    try {
+      parsedLegacyImages = JSON.parse(imageUrl)
+    } catch {
+      // Ignore
+    }
+  }
+
+  const images = parsedLegacyImages
+    ? parsedLegacyImages
+    : imageUrl
     ? [
         { quality: '50x50', url: resizeArtworkUrl(imageUrl, '50x50') },
         { quality: '150x150', url: resizeArtworkUrl(imageUrl, '150x150') },
