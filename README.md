@@ -1,64 +1,273 @@
-# JioSaavn API
+# 🎵 HeartTune
 
-![GitHub License](https://img.shields.io/github/license/sumitkolhe/jiosaavn-api)
-![GitHub Release](https://img.shields.io/github/v/release/sumitkolhe/jiosaavn-api)
+> **Feel the Beat. Love the Music.**
 
-An Unofficial API for downloading high-quality songs, albums, playlists, and more from [JioSaavn](https://jiosaavn.com).
+HeartTune is a modern, full-stack music streaming Progressive Web Application (PWA) inspired by leading music platforms. It delivers a premium listening experience with seamless playback, responsive design, personalized music discovery, and a beautiful Spotify-inspired interface.
 
-## 📚 Documentation
+Built with modern web technologies, HeartTune focuses on performance, scalability, accessibility, and an exceptional user experience across desktop and mobile devices.
 
-Check out the [API documentation](https://saavn.dev/docs) for detailed information on how to use the API.
+---
 
-## 📰 Changelog
+## ✨ Features
 
-For a detailed list of changes, see the [CHANGELOG](CHANGELOG.md).
+### 🎧 Music Experience
+- High-quality music streaming
+- Play, Pause, Next & Previous controls
+- Smart Queue Management
+- Shuffle & Repeat
+- Full-Screen Music Player
+- Background Playback
+- Lock Screen Media Controls
+- Persistent Playback
 
-## 🔌 Running Locally
+### 🔍 Search
+- Instant music search
+- Artist search
+- Album search
+- Smart search suggestions
+- Search history
 
-1. Clone the repository:
+### ❤️ Personal Library
+- Liked Songs
+- Recently Played
+- Downloads
+- User Playlists
+- Playlist Management
+- Favorite Albums
 
-   ```sh
-   git clone https://github.com/sumitkolhe/jiosaavn-api
-   cd jiosaavn-api
-   ```
+### 🎼 Smart Playlists
+- Create Playlists
+- Edit Playlists
+- Delete Playlists
+- Add & Remove Songs
+- Playlist Sharing
+- Dynamic Recommendations
 
-### Using Docker
+### 👤 User Features
+- Secure Authentication
+- Google Sign-In
+- User Profiles
+- Avatar Selection
+- Session Management
 
-```sh
-docker-compose up
+### 📱 Progressive Web App
+- Installable on Desktop & Mobile
+- Offline Ready
+- Responsive Design
+- Mobile Optimized
+- Fast Loading Experience
+
+### ⚡ Performance
+- Intelligent Caching
+- Optimized Rendering
+- Lazy Loading
+- Skeleton Loading
+- Image Optimization
+- Background Data Refresh
+
+### 🛡️ Production Ready
+- Error Monitoring
+- Secure Authentication
+- Responsive UI
+- Strong Type Safety
+- Clean Architecture
+
+---
+
+# 🛠 Tech Stack
+
+## Frontend
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+
+## Backend
+- Supabase
+
+## Database
+- PostgreSQL
+
+## Authentication
+- Supabase Auth
+
+## Performance
+- Upstash Redis
+
+## Monitoring
+- Sentry
+
+## Deployment
+- Vercel
+
+## Version Control
+- Git & GitHub
+
+---
+
+# 🚀 Highlights
+
+- 🎵 Premium Spotify-inspired UI
+- ⚡ Lightning-fast performance
+- 📱 Fully Responsive
+- 🌙 Modern Dark Theme
+- 🪟 Glassmorphism Design
+- 🔥 Smooth Animations
+- ♿ Accessibility Focused
+- 📦 Production-Ready Architecture
+- 🔐 Secure Authentication
+- 📈 Scalable Codebase
+
+---
+
+# 📂 Project Structure
+
+```text
+src/
+├── app/
+├── components/
+├── context/
+├── hooks/
+├── lib/
+├── services/
+├── types/
+├── utils/
+└── styles/
 ```
 
-OR
+---
 
-### Manually
+# ⚙️ Installation
 
-> [!NOTE]
-> You need `Bun(1.0.29+)` or `Node.js(v20+)`
+Clone the repository
 
-2. Install the required dependencies:
+```bash
+git clone https://github.com/your-username/HeartTune.git
+```
 
-   ```sh
-   bun install
-   ```
+Navigate to the project
 
-3. Launch the development server:
+```bash
+cd HeartTune
+```
 
-   ```sh
-   bun run dev
-   ```
+Install dependencies
 
-## ☁️ Deploying Your Own Instance
+```bash
+npm install
+```
 
-JioSaavn API can be deployed to either Cloudflare Workers or Vercel. Below are the instructions for deploying to each platform.
+Create a `.env.local` file
 
-### Cloudflare Workers
+```env
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 
-[![Deploy with Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/sumitkolhe/jiosaavn-api)
+UPSTASH_REDIS_REST_URL=YOUR_UPSTASH_URL
+UPSTASH_REDIS_REST_TOKEN=YOUR_UPSTASH_TOKEN
 
-### Vercel
+NEXT_PUBLIC_SENTRY_DSN=YOUR_SENTRY_DSN
+```
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sumitkolhe/jiosaavn-api)
+Run the development server
 
-## 📜 License
+```bash
+npm run dev
+```
 
-This project is distributed under the [MIT License](https://opensource.org/licenses/MIT). For more information, see the [LICENSE](LICENSE) file included in this repository.
+Open:
+
+```
+http://localhost:3000
+```
+
+---
+
+# 🚀 Deployment
+
+Optimized for deployment on **Vercel**.
+
+```bash
+vercel --prod
+```
+
+---
+
+# 📊 Performance Optimizations
+
+- Smart Data Caching
+- Background Data Refresh
+- Lazy Loading
+- Dynamic Imports
+- Optimized Image Loading
+- Memoization
+- Efficient State Management
+- Reduced API Calls
+- Fast Initial Rendering
+
+---
+
+# 🔒 Security
+
+- Secure Authentication
+- Row Level Security (RLS)
+- Protected Routes
+- Environment Variables
+- Error Monitoring
+- Secure API Communication
+
+---
+
+# 📱 Responsive Design
+
+Optimized for:
+
+- 📱 Mobile
+- 📲 Tablet
+- 💻 Laptop
+- 🖥 Desktop
+
+---
+
+# 🎯 Roadmap
+
+- AI Music Recommendations
+- Personalized Daily Mix
+- Mood-Based Playlists
+- Smart Recommendations
+- Advanced Queue
+- Lyrics Support
+- Listening Analytics
+- Enhanced Offline Experience
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome.
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push your branch
+5. Open a Pull Request
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+# 👨‍💻 Developer
+
+**Santheesh**
+
+If you found this project helpful, consider giving it a ⭐ on GitHub.
+
+---
+
+## 💙 HeartTune
+
+**Feel the Beat. Love the Music.**
