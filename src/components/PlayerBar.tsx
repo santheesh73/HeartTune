@@ -17,7 +17,7 @@ import {
 import { getArtistNames, getSongDuration } from '../api/saavn'
 import { formatDuration } from '../utils/format'
 import { extractSongTheme, type SongTheme } from '../utils/theme'
-import { usePlayer } from '../context/PlayerContext'
+import { usePlayer, usePlayerProgress } from '../context/PlayerContext'
 import { useLibrary } from '../context/LibraryContext'
 import { useEffect, useState, type CSSProperties } from 'react'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -39,8 +39,6 @@ export default function PlayerBar() {
     queue,
     queueIndex,
     isPlaying,
-    progress,
-    duration,
     volume,
     shuffle,
     repeat,
@@ -54,6 +52,7 @@ export default function PlayerBar() {
     toggleShuffle,
     toggleRepeat,
   } = usePlayer()
+  const { progress, duration } = usePlayerProgress()
 
   const { isLiked, toggleLike } = useLibrary()
   const [expanded, setExpanded] = useState(false)

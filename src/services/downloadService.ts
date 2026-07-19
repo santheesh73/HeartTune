@@ -3,9 +3,15 @@ import type { DownloadMetadata } from '../types'
 import { supabase } from '../lib/supabase'
 import { auditLog } from '../lib/monitoring'
 import { buildSongRecord } from './songRecord'
-import { assertNoSupabaseError, requireSupabase } from './serviceUtils'
+import { assertNoSupabaseError, requireSupabase, isOffline } from './serviceUtils'
+import { addToSyncQueue } from './syncService'
 
-export async function saveDownloadMetadata(userId: string, song: Song) {
+export async function saveDownloadMetadata(userId: string, song: Song, skipQueue = false) {
+  if (isOffline() && !skipQueue) {
+    addToSyncQueue({ type: 'download_metadata', userId, payload: song })
+    return
+  }
+
   const client = requireSupabase(supabase)
   const record = buildSongRecord(song)
 
@@ -48,7 +54,12 @@ export async function getDownloads(userId: string) {
   return (data || []) as DownloadMetadata[]
 }
 
-export async function removeDownloadMetadata(userId: string, songId: string) {
+export async function removeDownloadMetadata(userId: string, songId: string, skipQueue = false) {
+  if (isOffline() && !skipQueue) {
+    addToSyncQueue({ type: 'remove_download_metadata', userId, payload: { id: songId } })
+    return
+  }
+
   const client = requireSupabase(supabase)
   const { error } = await client
     .from('downloads')

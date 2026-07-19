@@ -18,6 +18,9 @@ import { getAllDownloads, getDownload, removeDownload, saveDownload } from '../u
 import type { Album, UserPlaylist } from '../types'
 import { getUserPlaylists } from '../services/playlistService'
 import { getLikedAlbums, addLikedAlbum, removeLikedAlbum } from '../services/likedAlbumsService'
+import { getArtworkUrl, FALLBACK_ARTWORK_URL } from '../lib/utils/artwork'
+import { getLyrics } from '../api/lyrics'
+import { readOfflineCache, writeOfflineCache } from '../utils/offlineCache'
 
 interface LibraryContextType {
   likedSongs: Song[]
@@ -111,11 +114,18 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       setLikedAlbums([])
       return
     }
+    const cacheKey = `hearttune_liked_albums:${user.id}`
+    if (isOffline()) {
+      setLikedAlbums(readOfflineCache<Album[]>(cacheKey, []))
+      return
+    }
     try {
       const data = await getLikedAlbums(user.id)
       setLikedAlbums(data)
+      writeOfflineCache(cacheKey, data)
     } catch (err) {
       console.warn('Failed to refresh liked albums', err)
+      setLikedAlbums(readOfflineCache<Album[]>(cacheKey, []))
     }
   }, [user])
 
@@ -160,7 +170,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
 
     const result = await toggleLikedSong(song)
-    if (result.error) {
+    if (result && 'error' in result && result.error) {
       window.alert(result.error)
       return false
     }
@@ -177,16 +187,47 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const response = await fetch(url)
       const blob = await response.blob()
 
-      await saveDownload(resolved, blob)
+      // Fetch artwork and lyrics
+      const artworkUrl = getArtworkUrl(resolved.image, '500x500')
+      let artworkBlob: Blob | undefined
+      if (artworkUrl && artworkUrl !== FALLBACK_ARTWORK_URL) {
+        try {
+          const artRes = await fetch(artworkUrl)
+          if (artRes.ok) {
+            artworkBlob = await artRes.blob()
+            // Put it in cache for service worker matching
+            try {
+              const imgCache = await window.caches.open('hearttune-images-v3')
+              await imgCache.put(artworkUrl, new Response(artworkBlob.slice(), {
+                headers: { 'Content-Type': artworkBlob.type }
+              }))
+            } catch (err) {
+              console.warn('Failed to cache artwork in window caches', err)
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch artwork blob during download', err)
+        }
+      }
+
+      let lyrics: any = null
+      const artistName = resolved.artists?.primary?.[0]?.name || ''
+      if (artistName) {
+        try {
+          lyrics = await getLyrics(resolved.name, artistName)
+        } catch (err) {
+          console.warn('Failed to fetch lyrics during download', err)
+        }
+      }
+
+      await saveDownload(resolved, blob, artworkBlob, lyrics)
       blobCache.current.set(song.id, URL.createObjectURL(blob))
       setDownloadedIds((prev) => new Set(prev).add(song.id))
 
       if (user) {
         try {
-          if (!isOffline()) {
-            await saveDownloadMetadata(user.id, resolved)
-            setDownloadMetadataError(null)
-          }
+          await saveDownloadMetadata(user.id, resolved)
+          setDownloadMetadataError(null)
         } catch (error) {
           if (isOfflineError(error)) {
             setDownloadMetadataError(null)
@@ -222,10 +263,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
     if (user) {
       try {
-        if (!isOffline()) {
-          await removeDownloadMetadata(user.id, id)
-          setDownloadMetadataError(null)
-        }
+        await removeDownloadMetadata(user.id, id)
+        setDownloadMetadataError(null)
       } catch (error) {
         if (isOfflineError(error)) {
           setDownloadMetadataError(null)

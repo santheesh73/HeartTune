@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { memo, useEffect, useMemo, useState } from 'react'
 import { FALLBACK_ARTWORK_URL, normalizeArtworkUrl } from '../lib/utils/artwork'
+import { getArtworkBlob } from '../utils/downloads'
 
 export interface ArtworkImageProps {
   src?: string | null
@@ -35,6 +36,7 @@ function ArtworkImageComponent({
   }, [candidateKey])
   const [candidateIndex, setCandidateIndex] = useState(0)
   const [loaded, setLoaded] = useState(false)
+  const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null)
 
   useEffect(() => {
     setCandidateIndex(0)
@@ -43,15 +45,46 @@ function ArtworkImageComponent({
 
   const activeSrc = candidates[candidateIndex] || FALLBACK_ARTWORK_URL
 
+  useEffect(() => {
+    let active = true
+    if (!activeSrc || activeSrc === FALLBACK_ARTWORK_URL) {
+      setLocalBlobUrl(null)
+      return
+    }
+
+    async function loadLocalArtwork() {
+      try {
+        const blob = await getArtworkBlob(activeSrc)
+        if (blob && active) {
+          const url = URL.createObjectURL(blob)
+          setLocalBlobUrl(url)
+        } else if (active) {
+          setLocalBlobUrl(null)
+        }
+      } catch {
+        if (active) setLocalBlobUrl(null)
+      }
+    }
+
+    void loadLocalArtwork()
+    return () => {
+      active = false
+      if (localBlobUrl) {
+        URL.revokeObjectURL(localBlobUrl)
+      }
+    }
+  }, [activeSrc])
+
   return (
     <Image
-      src={activeSrc}
+      src={localBlobUrl || activeSrc}
       alt={alt}
       width={500}
       height={500}
       sizes={sizes}
       priority={priority}
       loading={priority ? 'eager' : 'lazy'}
+      unoptimized={true}
       placeholder="empty"
       referrerPolicy="no-referrer"
       className={`${className} artwork-image ${loaded ? 'artwork-image-loaded' : 'artwork-image-loading'}`.trim()}

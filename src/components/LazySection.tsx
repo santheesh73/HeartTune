@@ -28,7 +28,7 @@ export default function LazySection({ config, eager = false }: LazySectionProps)
         <div className="h-8 w-48 bg-white/10 rounded animate-pulse mb-2"></div>
         <div className="flex gap-5 sm:gap-6 overflow-hidden">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-48 w-[150px] sm:w-[190px] md:w-[220px] shrink-0 bg-white/5 rounded-xl animate-pulse" />
+            <div key={i} className="h-48 w-[110px] sm:w-[140px] md:w-[160px] shrink-0 bg-white/5 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>

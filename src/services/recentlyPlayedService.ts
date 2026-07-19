@@ -1,9 +1,10 @@
 import type { Song } from '../types'
 import { supabase } from '../lib/supabase'
 import { buildSongRecord, mapRecordToSong } from './songRecord'
-import { assertNoSupabaseError, requireSupabase } from './serviceUtils'
+import { assertNoSupabaseError, requireSupabase, isOffline } from './serviceUtils'
 import { readOfflineCache, writeOfflineCache } from '../utils/offlineCache'
 import { getSongs } from '../api/saavn'
+import { addToSyncQueue } from './syncService'
 
 const LAST_RECENTLY_PLAYED_CACHE_KEY = 'hearttune-recently-played:last'
 export const RECENTLY_PLAYED_UPDATED_EVENT = 'hearttune:recently-played-updated'
@@ -74,7 +75,7 @@ function writeCachedRecentlyPlayed(userId: string, entries: CachedRecentSongEntr
   }
 }
 
-export async function addRecentlyPlayed(userId: string, song: Song) {
+export async function addRecentlyPlayed(userId: string, song: Song, skipQueue = false) {
   const cached = readCachedRecentlyPlayed(userId)
   const nextEntry = {
     id: `${song.id}-${Date.now()}`,
@@ -86,6 +87,11 @@ export async function addRecentlyPlayed(userId: string, song: Song) {
     userId,
     [nextEntry, ...cached.filter((entry) => entry.song.id !== song.id)].slice(0, 20)
   )
+
+  if (isOffline() && !skipQueue) {
+    addToSyncQueue({ type: 'recently_played', userId, payload: song })
+    return
+  }
 
   const client = requireSupabase(supabase)
   const record = buildSongRecord(song)

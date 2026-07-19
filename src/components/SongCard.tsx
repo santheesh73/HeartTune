@@ -3,7 +3,7 @@ import { ListPlus, Play, ListMusic, MoreVertical } from 'lucide-react'
 import { getArtistNames } from '../api/saavn'
 import type { Song } from '../types'
 import { usePlayer } from '../context/PlayerContext'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import SongArtwork from './SongArtwork'
 import AddToPlaylistModal from './AddToPlaylistModal'
 
@@ -14,7 +14,7 @@ interface SongCardProps {
   eager?: boolean
 }
 
-export default function SongCard({ song, queue, index = 0, eager = false }: SongCardProps) {
+export function SongCard({ song, queue, index = 0, eager = false }: SongCardProps) {
   const { playSong, addToQueue, currentSong, isPlaying } = usePlayer()
   const [queueMessage, setQueueMessage] = useState('')
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false)
@@ -181,3 +181,5 @@ export default function SongCard({ song, queue, index = 0, eager = false }: Song
     </motion.div>
   )
 }
+
+export default React.memo(SongCard)

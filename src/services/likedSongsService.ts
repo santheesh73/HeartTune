@@ -1,8 +1,9 @@
 import type { Song } from '../types'
 import { supabase } from '../lib/supabase'
 import { buildSongRecord, mapRecordToSong } from './songRecord'
-import { assertNoSupabaseError, requireSupabase } from './serviceUtils'
+import { assertNoSupabaseError, requireSupabase, isOffline } from './serviceUtils'
 import { getSongs } from '../api/saavn'
+import { addToSyncQueue } from './syncService'
 
 async function hydrateLikedSongs(songs: Song[]) {
   if (!songs.length) return songs
@@ -31,11 +32,16 @@ async function hydrateLikedSongs(songs: Song[]) {
   }
 }
 
-export async function likeSong(userId: string, song: Song) {
+export async function likeSong(userId: string, song: Song, skipQueue = false) {
+  if (isOffline() && !skipQueue) {
+    addToSyncQueue({ type: 'like', userId, payload: song })
+    return null
+  }
+
   const client = requireSupabase(supabase)
   const record = buildSongRecord(song)
 
-  await unlikeSong(userId, song.id)
+  await unlikeSong(userId, song.id, skipQueue)
 
   const { data, error } = await client
     .from('liked_songs')
@@ -56,7 +62,12 @@ export async function likeSong(userId: string, song: Song) {
   return data
 }
 
-export async function unlikeSong(userId: string, songId: string) {
+export async function unlikeSong(userId: string, songId: string, skipQueue = false) {
+  if (isOffline() && !skipQueue) {
+    addToSyncQueue({ type: 'unlike', userId, payload: { id: songId } })
+    return
+  }
+
   const client = requireSupabase(supabase)
   const { error } = await client
     .from('liked_songs')

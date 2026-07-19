@@ -1,12 +1,14 @@
 'use client'
 
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { AuthProvider } from './context/AuthContext'
 import { PlayerProvider } from './context/PlayerContext'
 import { LibraryProvider } from './context/LibraryContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { ThemeProvider } from './context/ThemeContext'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { NetworkProvider } from './context/NetworkContext'
+import { QueryClient, QueryClientProvider, dehydrate, hydrate } from '@tanstack/react-query'
 import Layout from './components/Layout'
 import Login from './views/Login'
 import Home from './views/Home'
@@ -133,28 +135,69 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 30 * 60 * 1000, // 30 minutes
-      retry: 1,
       refetchOnWindowFocus: false,
+      networkMode: 'offlineFirst',
+      retry: (failureCount, error) => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          return false
+        }
+        return failureCount < 1
+      },
     },
   },
 })
 
 export default function App() {
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    // Hydrate cache on startup
+    try {
+      const savedCache = localStorage.getItem('hearttune-query-cache')
+      if (savedCache) {
+        hydrate(queryClient, JSON.parse(savedCache))
+      }
+    } catch (err) {
+      console.warn('Failed to hydrate query cache', err)
+    }
+
+    // Subscribe to query cache changes to persist them
+    let timeout: any
+    const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+      clearTimeout(timeout)
+      timeout = setTimeout(() => {
+        try {
+          const dehydrated = dehydrate(queryClient)
+          localStorage.setItem('hearttune-query-cache', JSON.stringify(dehydrated))
+        } catch (err) {
+          console.warn('Failed to persist query cache', err)
+        }
+      }, 1000)
+    })
+
+    return () => {
+      clearTimeout(timeout)
+      unsubscribe()
+    }
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <LanguageProvider>
-            <LibraryProvider>
-              <PlayerProvider>
-                <AppRoutes />
-              </PlayerProvider>
-            </LibraryProvider>
-          </LanguageProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+        <NetworkProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <LanguageProvider>
+                <LibraryProvider>
+                  <PlayerProvider>
+                    <AppRoutes />
+                  </PlayerProvider>
+                </LibraryProvider>
+              </LanguageProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </NetworkProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   )
 }

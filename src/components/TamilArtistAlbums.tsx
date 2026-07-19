@@ -67,7 +67,7 @@ export default function TamilArtistAlbums() {
       {loading ? (
         <div className="flex overflow-x-auto gap-4 sm:gap-6 px-4 sm:px-6 pb-6 pt-2 hide-scrollbar">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+            <div key={index} className="shrink-0 w-[110px] sm:w-[140px] md:w-[160px]">
               <div className="skeleton-card w-full aspect-square rounded-xl" />
             </div>
           ))}
@@ -78,7 +78,7 @@ export default function TamilArtistAlbums() {
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {albums.map((album, index) => (
-            <div key={album.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+            <div key={album.id} className="snap-start shrink-0 w-[110px] sm:w-[140px] md:w-[160px]">
               <AlbumCard album={album} index={index} />
             </div>
           ))}

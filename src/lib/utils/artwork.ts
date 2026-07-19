@@ -52,12 +52,7 @@ export function isJioSaavnArtworkUrl(value?: string | null) {
   }
 }
 
-export function proxyArtworkUrl(value?: string | null) {
-  const normalized = normalizeArtworkUrl(value)
-  return isJioSaavnArtworkUrl(normalized)
-    ? `/api/artwork?v=${ARTWORK_PROXY_VERSION}&url=${encodeURIComponent(normalized)}`
-    : normalized
-}
+
 
 /** Independent HTTPS fallback for JioSaavn CDN outages and TLS failures. */
 export function mirrorArtworkUrl(value?: string | null, requestedSize = '500x500') {
@@ -84,7 +79,6 @@ function addRecoveryCandidates(urls: Set<string>, value: string, size: string) {
   const original = normalizeArtworkUrl(value)
   if (!isJioSaavnArtworkUrl(original)) return
 
-  urls.add(proxyArtworkUrl(original))
   urls.add(mirrorArtworkUrl(original, size))
 }
 

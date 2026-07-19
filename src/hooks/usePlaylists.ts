@@ -9,8 +9,9 @@ import {
   getPlaylistById,
   removeSongFromPlaylist,
 } from '../services/playlistService'
-import { getErrorMessage } from '../services/serviceUtils'
+import { getErrorMessage, isOffline } from '../services/serviceUtils'
 import { useAuth } from './useAuth'
+import { readOfflineCache, writeOfflineCache } from '../utils/offlineCache'
 
 function getPlaylistErrorMessage(error: unknown, fallback: string) {
   const message = getErrorMessage(error, fallback)
@@ -42,10 +43,20 @@ export function usePlaylists() {
     setLoading(true)
     setError(null)
 
+    const cacheKey = `hearttune_playlists_cache:${user.id}`
+    if (isOffline()) {
+      setPlaylists(readOfflineCache<UserPlaylist[]>(cacheKey, []))
+      setLoading(false)
+      return
+    }
+
     try {
-      setPlaylists(await getPlaylists(user.id))
+      const data = await getPlaylists(user.id)
+      setPlaylists(data)
+      writeOfflineCache(cacheKey, data)
     } catch (nextError) {
       setError(getPlaylistErrorMessage(nextError, 'Unable to load playlists'))
+      setPlaylists(readOfflineCache<UserPlaylist[]>(cacheKey, []))
     } finally {
       setLoading(false)
     }
@@ -78,12 +89,21 @@ export function usePlaylists() {
   const loadPlaylist = useCallback(
     async (playlistId: string) => {
       if (!user) return null
+      const cacheKey = `hearttune_playlist_detail:${user.id}:${playlistId}`
+
+      if (isOffline()) {
+        return readOfflineCache<any>(cacheKey, null)
+      }
 
       try {
-        return await getPlaylistById(user.id, playlistId)
+        const data = await getPlaylistById(user.id, playlistId)
+        if (data) {
+          writeOfflineCache(cacheKey, data)
+        }
+        return data
       } catch (nextError) {
         setError(getErrorMessage(nextError, 'Unable to load playlist'))
-        return null
+        return readOfflineCache<any>(cacheKey, null)
       }
     },
     [user]

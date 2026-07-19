@@ -3,6 +3,7 @@ const PAGE_CACHE = 'hearttune-pages-v1'
 const IMAGE_CACHE = 'hearttune-images-v3'
 const OFFLINE_URL = '/offline.html'
 const PRECACHE_URLS = [
+  '/',
   OFFLINE_URL,
   '/manifest.json',
   '/favicon.png',
@@ -45,11 +46,18 @@ function isCacheableStaticAsset(requestUrl) {
   )
 }
 
+function isFontRequest(requestUrl) {
+  return (
+    requestUrl.hostname === 'fonts.gstatic.com' ||
+    requestUrl.hostname === 'fonts.googleapis.com' ||
+    /\.(?:woff2?|eot|ttf|otf)$/i.test(requestUrl.pathname)
+  )
+}
+
 async function networkFirst(request) {
   const cache = await caches.open(PAGE_CACHE)
 
   try {
-    // Pages stay fresh when online, but can still open from cache when offline.
     const response = await fetch(request)
     if (response.ok) {
       cache.put(request, response.clone())
@@ -60,7 +68,28 @@ async function networkFirst(request) {
     if (cachedResponse) {
       return cachedResponse
     }
+    // Fall back to root App Shell first when offline
+    const shellResponse = await caches.match('/')
+    if (shellResponse) {
+      return shellResponse
+    }
     return caches.match(OFFLINE_URL)
+  }
+}
+
+async function cacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName)
+  const cachedResponse = await cache.match(request)
+  if (cachedResponse) return cachedResponse
+
+  try {
+    const response = await fetch(request)
+    if (response.ok) {
+      cache.put(request, response.clone())
+    }
+    return response
+  } catch {
+    return Response.error()
   }
 }
 
@@ -68,7 +97,6 @@ async function staleWhileRevalidate(request) {
   const cache = await caches.open(STATIC_CACHE)
   const cachedResponse = await cache.match(request)
 
-  // Static assets load fast from cache while the service worker refreshes them in the background.
   const networkPromise = fetch(request)
     .then((response) => {
       if (response.ok) {
@@ -95,9 +123,6 @@ async function cacheFirstImage(request) {
     }
     return response
   } catch {
-    // Let the image element receive an error so ArtworkImage can try its next
-    // CDN/mirror/proxy candidate. Returning the app icon here falsely marks a
-    // broken request as loaded and permanently hides valid album artwork.
     return Response.error()
   }
 }
@@ -113,7 +138,12 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Leave Supabase, JioSaavn API, and other non-image cross-origin requests untouched.
+  // Handle fonts via Cache First strategy
+  if (isFontRequest(requestUrl)) {
+    event.respondWith(cacheFirst(request, STATIC_CACHE))
+    return
+  }
+
   if (requestUrl.origin !== self.location.origin) return
 
   if (request.mode === 'navigate') {
@@ -122,6 +152,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (isCacheableStaticAsset(requestUrl)) {
-    event.respondWith(staleWhileRevalidate(request))
+    // Cache First for compiled Next.js chunks, Stale While Revalidate for other local assets
+    if (requestUrl.pathname.startsWith('/_next/static/')) {
+      event.respondWith(cacheFirst(request, STATIC_CACHE))
+    } else {
+      event.respondWith(staleWhileRevalidate(request))
+    }
   }
 })

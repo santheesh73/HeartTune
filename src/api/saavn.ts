@@ -273,6 +273,30 @@ export function getLyricistsForLanguage(language: string) {
 
 
 export async function getArtist(id: string) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    try {
+      const { getAllDownloads } = await import('../utils/downloads')
+      const downloads = await getAllDownloads()
+      const artistSongs = downloads
+        .map((entry) => entry.song)
+        .filter((song) => song.artists?.primary?.some((a) => a.id === id))
+
+      if (artistSongs.length > 0) {
+        const firstArtist = artistSongs[0].artists.primary.find((a) => a.id === id)
+        return {
+          id: id,
+          name: firstArtist?.name || 'Downloaded Artist',
+          image: firstArtist?.image || artistSongs[0].image,
+          topSongs: artistSongs,
+          topAlbums: []
+        } as unknown as ArtistDetail
+      }
+    } catch (err) {
+      console.warn('Failed to reconstruct artist offline:', err)
+    }
+    return null
+  }
+
   const data = await fetchApi<ArtistDetail>(`/artists?id=${id}`)
   return data
 }
@@ -351,6 +375,31 @@ export async function searchPlaylists(query: string, page = 1, limit = 12) {
 }
 
 export async function getAlbum(id: string) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    try {
+      const { getAllDownloads } = await import('../utils/downloads')
+      const downloads = await getAllDownloads()
+      const albumSongs = downloads
+        .map((entry) => entry.song)
+        .filter((song) => song.album?.id === id)
+
+      if (albumSongs.length > 0) {
+        const first = albumSongs[0]
+        return {
+          id: id,
+          name: first.album.name,
+          image: first.image,
+          songs: albumSongs,
+          artists: { primary: first.artists?.primary || [] },
+          year: first.year || ''
+        } as Album
+      }
+    } catch (err) {
+      console.warn('Failed to reconstruct album offline:', err)
+    }
+    return null
+  }
+
   const data = await fetchApi<Album | Album[]>(`/albums?id=${id}`)
   const album = Array.isArray(data) ? data[0] : data
   if (album?.songs?.length) {

@@ -110,7 +110,7 @@ export default function TopPicks() {
               ) : (
                 <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {recentlyPlayed.map((entry, i) => (
-                    <div key={entry.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+                    <div key={entry.id} className="snap-start shrink-0 w-[130px] sm:w-[160px] md:w-[180px]">
                       <SongCard
                         song={entry.song}
                         queue={recentlyPlayed.map((item) => item.song)}
@@ -138,7 +138,7 @@ export default function TopPicks() {
             {trending.length > 0 && (
               <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {trending.map((song, i) => (
-                  <div key={song.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+                  <div key={song.id} className="snap-start shrink-0 w-[130px] sm:w-[160px] md:w-[180px]">
                     <SongCard
                       song={song}
                       queue={trending}
@@ -165,7 +165,7 @@ export default function TopPicks() {
             {albums.length > 0 && (
               <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 snap-x snap-mandatory hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {albums.map((album, i) => (
-                  <div key={album.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+                  <div key={album.id} className="snap-start shrink-0 w-[130px] sm:w-[160px] md:w-[180px]">
                     <AlbumCard album={album} index={i} />
                   </div>
                 ))}

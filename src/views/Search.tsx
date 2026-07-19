@@ -165,7 +165,7 @@ export default function Search() {
     const trimmed = decodeHtmlEntities(q).trim()
     if (!trimmed) return
 
-    if (user?.id) {
+    if (user?.id && typeof navigator !== 'undefined' && navigator.onLine) {
       void addSearchHistory(user.id, trimmed)
     }
 
@@ -177,6 +177,29 @@ export default function Search() {
     setSearched(true)
     setShowSuggestions(false)
     setParams({ q: trimmed })
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      try {
+        const { searchDownloadedContent } = await import('../utils/downloads')
+        const offlineResults = await searchDownloadedContent(trimmed)
+        if (requestId !== searchRequestRef.current) return
+        setSongs(offlineResults.songs)
+        setAlbums(offlineResults.albums)
+        setQuery(trimmed)
+        setActiveTab((tab) => (tab === 'albums' && offlineResults.albums.length === 0 ? 'songs' : tab))
+      } catch (err) {
+        console.warn('Failed local offline search:', err)
+        if (requestId !== searchRequestRef.current) return
+        setSongs([])
+        setAlbums([])
+      } finally {
+        if (requestId === searchRequestRef.current) {
+          setLoading(false)
+        }
+      }
+      return
+    }
+
     try {
       const [s, related, a, albumSongs] = await Promise.all([
         searchSongs(trimmed, 1, 24),
@@ -246,6 +269,24 @@ export default function Search() {
 
     setSuggestLoading(true)
     debounceRef.current = setTimeout(async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        try {
+          const { searchDownloadedContent } = await import('../utils/downloads')
+          const offlineResults = await searchDownloadedContent(trimmed)
+          if (requestId !== suggestionRequestRef.current) return
+          setSuggestions(offlineResults.songs.slice(0, 8))
+          setActiveSuggestion(-1)
+        } catch {
+          if (requestId !== suggestionRequestRef.current) return
+          setSuggestions([])
+        } finally {
+          if (requestId === suggestionRequestRef.current) {
+            setSuggestLoading(false)
+          }
+        }
+        return
+      }
+
       try {
         const results = await getSongSuggestions(trimmed, 8, language)
         if (requestId !== suggestionRequestRef.current) return
@@ -259,7 +300,7 @@ export default function Search() {
           setSuggestLoading(false)
         }
       }
-    }, 300)
+    }, 400)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)

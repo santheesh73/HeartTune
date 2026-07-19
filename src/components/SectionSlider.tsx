@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import React, { useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import type { HomeSection } from '../services/recommendationService'
@@ -10,7 +10,7 @@ interface SectionSliderProps {
   eager?: boolean
 }
 
-export default function SectionSlider({ section, eager = false }: SectionSliderProps) {
+function SectionSlider({ section, eager = false }: SectionSliderProps) {
   const sliderRef = useRef<HTMLDivElement>(null)
   const { playSong } = usePlayer()
 
@@ -68,7 +68,7 @@ export default function SectionSlider({ section, eager = false }: SectionSliderP
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {section.items.map((song, i) => (
-            <div key={`${section.id}-${song.id}-${i}`} className="snap-start shrink-0 w-[150px] sm:w-[190px] md:w-[220px]">
+            <div key={`${section.id}-${song.id}-${i}`} className="snap-start shrink-0 w-[110px] sm:w-[140px] md:w-[160px]">
               <SongCard song={song} queue={section.items} index={i} eager={eager && i < 4} />
             </div>
           ))}
@@ -91,3 +91,5 @@ export default function SectionSlider({ section, eager = false }: SectionSliderP
     </section>
   )
 }
+
+export default React.memo(SectionSlider)

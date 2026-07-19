@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Mic2, Loader } from 'lucide-react'
-import { usePlayer } from '../context/PlayerContext'
+import { usePlayer, usePlayerProgress } from '../context/PlayerContext'
 import { getLyrics, LyricsData } from '../api/lyrics'
 import { parseLrc, SyncedLyricLine } from '../utils/lyrics'
 
@@ -11,7 +11,8 @@ interface LyricsPanelProps {
 }
 
 export default function LyricsPanel({ isOpen, onClose }: LyricsPanelProps) {
-  const { currentSong, progress } = usePlayer()
+  const { currentSong } = usePlayer()
+  const { progress } = usePlayerProgress()
   const [lyricsData, setLyricsData] = useState<LyricsData | null>(null)
   const [syncedLines, setSyncedLines] = useState<SyncedLyricLine[]>([])
   const [loading, setLoading] = useState(false)

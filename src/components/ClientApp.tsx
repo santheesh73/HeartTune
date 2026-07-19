@@ -5,20 +5,6 @@ import PWARegistration from './PWARegistration'
 import AppLogoLoader from './AppLogoLoader'
 
 if (typeof window !== 'undefined') {
-  const originalPushState = window.history.pushState
-  const originalReplaceState = window.history.replaceState
-
-  window.history.pushState = function (state, title, url) {
-    const nextJsState = window.history.state
-    const mergedState = nextJsState && typeof nextJsState === 'object' ? { ...nextJsState, ...state } : state
-    return originalPushState.apply(this, [mergedState, title, url])
-  }
-
-  window.history.replaceState = function (state, title, url) {
-    const nextJsState = window.history.state
-    const mergedState = nextJsState && typeof nextJsState === 'object' ? { ...nextJsState, ...state } : state
-    return originalReplaceState.apply(this, [mergedState, title, url])
-  }
 
   // Next.js dev overlay captures console.error. We want offline mode to be graceful,
   // so we hide the Supabase fetch errors that it automatically logs.

@@ -27,26 +27,67 @@ export interface UserProfile {
   recentSeedSongs: string[]
 }
 
-async function getRedisCache<T>(key: string): Promise<T | null> {
+let getCacheQueue: { key: string; resolve: (val: any) => void }[] = []
+let getCacheTimeout: any = null
+
+async function flushGetCacheQueue() {
+  if (getCacheQueue.length === 0) return
+  const queue = [...getCacheQueue]
+  getCacheQueue = []
+  
   try {
-    const res = await fetch(`/api/redis?key=${encodeURIComponent(key)}`)
-    if (!res.ok) return null
+    const keys = Array.from(new Set(queue.map(q => q.key)))
+    const res = await fetch('/api/redis/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'GET', keys })
+    })
     const json = await res.json()
-    return json.data as T
+    const data = json?.data || {}
+    queue.forEach(q => q.resolve(data[q.key] ?? null))
   } catch {
-    return null
+    queue.forEach(q => q.resolve(null))
+  }
+}
+
+async function getRedisCache<T>(key: string): Promise<T | null> {
+  return new Promise((resolve) => {
+    getCacheQueue.push({ key, resolve })
+    if (!getCacheTimeout) {
+      getCacheTimeout = setTimeout(() => {
+        getCacheTimeout = null
+        flushGetCacheQueue()
+      }, 50)
+    }
+  })
+}
+
+let setCacheQueue: { key: string; value: any; ttlSeconds: number }[] = []
+let setCacheTimeout: any = null
+
+async function flushSetCacheQueue() {
+  if (setCacheQueue.length === 0) return
+  const items = [...setCacheQueue]
+  setCacheQueue = []
+  
+  try {
+    await fetch('/api/redis/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'SET', items })
+    })
+  } catch {
+    // Best effort
   }
 }
 
 async function setRedisCache(key: string, value: unknown, ttlSeconds = 3600) {
-  try {
-    await fetch('/api/redis', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value, ttlSeconds }),
-    })
-  } catch {
-    // best effort
+  setCacheQueue.push({ key, value, ttlSeconds })
+  if (!setCacheTimeout) {
+    setCacheTimeout = setTimeout(() => {
+      setCacheTimeout = null
+      flushSetCacheQueue()
+    }, 1000)
   }
 }
 
@@ -492,19 +533,23 @@ export async function generateHomeFeed(userId: string | null, language: string):
 }
 
 export async function getGenericSections(language: string): Promise<HomeSection[]> {
-  const [trending, chill, workout, romantic, party] = await Promise.all([
-    searchSongs(`top ${language === 'all' ? 'hits' : language + ' hits'}`, 1, 30),
-    searchSongs(`chill vibes ${language === 'all' ? '' : language}`, 1, 30),
-    searchSongs(`workout mix ${language === 'all' ? '' : language}`, 1, 30),
-    searchSongs(`romantic hits ${language === 'all' ? '' : language}`, 1, 30),
-    searchSongs(`party mix ${language === 'all' ? '' : language}`, 1, 30)
-  ])
+  try {
+    const [trending, chill, workout, romantic, party] = await Promise.all([
+      searchSongs(`top ${language === 'all' ? 'hits' : language + ' hits'}`, 1, 30),
+      searchSongs(`chill vibes ${language === 'all' ? '' : language}`, 1, 30),
+      searchSongs(`workout mix ${language === 'all' ? '' : language}`, 1, 30),
+      searchSongs(`romantic hits ${language === 'all' ? '' : language}`, 1, 30),
+      searchSongs(`party mix ${language === 'all' ? '' : language}`, 1, 30)
+    ])
 
-  return [
-    { id: 'trending', title: '🔥 Trending Now', items: filterFullSongs(trending.results).slice(0, 24), type: 'song' as const },
-    { id: 'chill', title: '🌙 Chill Vibes', items: filterFullSongs(chill.results).slice(0, 24), type: 'song' as const },
-    { id: 'workout', title: '💪 Workout Mix', items: filterFullSongs(workout.results).slice(0, 24), type: 'song' as const },
-    { id: 'romantic', title: '❤️ Romantic Hits', items: filterFullSongs(romantic.results).slice(0, 24), type: 'song' as const },
-    { id: 'party', title: '🎉 Party Mix', items: filterFullSongs(party.results).slice(0, 24), type: 'song' as const }
-  ].filter(section => section.items.length > 0)
+    return [
+      { id: 'trending', title: '🔥 Trending Now', items: filterFullSongs(trending.results).slice(0, 24), type: 'song' as const },
+      { id: 'chill', title: '🌙 Chill Vibes', items: filterFullSongs(chill.results).slice(0, 24), type: 'song' as const },
+      { id: 'workout', title: '💪 Workout Mix', items: filterFullSongs(workout.results).slice(0, 24), type: 'song' as const },
+      { id: 'romantic', title: '❤️ Romantic Hits', items: filterFullSongs(romantic.results).slice(0, 24), type: 'song' as const },
+      { id: 'party', title: '🎉 Party Mix', items: filterFullSongs(party.results).slice(0, 24), type: 'song' as const }
+    ].filter(section => section.items.length > 0)
+  } catch {
+    return []
+  }
 }
